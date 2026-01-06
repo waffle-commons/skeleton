@@ -1,0 +1,19 @@
+{
+# Active le mode Worker de FrankenPHP (Performance X10)
+    frankenphp
+    order php_server before file_server
+}
+
+# Définition du serveur (HTTP/HTTPS géré automatiquement)
+{$SERVER_NAME:localhost} {
+    root * public/
+    encode zstd gzip
+
+    php_server {
+        # Configure le point d'entrée pour les URLs qui ne sont pas des fichiers
+        resolve_root_symlink
+    }
+
+    # Servir les fichiers statiques (images, css, js)
+    file_server
+}
