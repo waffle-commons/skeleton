@@ -1,5 +1,5 @@
 <p align="center">
-<img src="./logo.png" alt="Waffle Ecosystem Logo">
+<img src="https://github.com/waffle-commons/.github/blob/main/assets/logo.png" alt="Waffle Ecosystem Logo">
 </p>
 <h1 align="center">🦁 Waffle Skeleton</h1>
 <p align="center">
