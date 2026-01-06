@@ -28,6 +28,8 @@ use App\Kernel;
  */
 final class AppKernelFactory
 {
+    private static GlobalsFactory $globalsFactory;
+
     /**
      * Creates the fully assembled Kernel.
      */
@@ -51,6 +53,9 @@ final class AppKernelFactory
             configDir: $rootConfig,
             environment: $env,
         );
+        // Prepare GlobalsFactory for trusted_hosts configuration
+        $trustedHosts = $config->getArray(key: 'waffle.trusted_hosts');
+        self::$globalsFactory = new GlobalsFactory(trustedHosts: $trustedHosts);
 
         // 3. Instantiate Security (from waffle-commons/security)
         $security = new Security($config);
@@ -109,7 +114,7 @@ final class AppKernelFactory
      */
     public static function createRequest(): ServerRequestInterface
     {
-        return new GlobalsFactory()->createFromGlobals();
+        return self::$globalsFactory->createFromGlobals();
     }
 
     /**
