@@ -94,8 +94,8 @@ class Setup
     private static function createVarDirectories(string $rootDir, object $io): void
     {
         $dirs = [
-            'var/cache',
-            'var/log'
+            'var/cache/prod',
+            'var/log',
         ];
 
         foreach ($dirs as $dir) {
