@@ -1,0 +1,13 @@
+.git
+.env
+.env.test
+.phpunit.result.cache
+.gitignore
+docker-compose.yml
+docker-compose.override.yml
+README.md
+LICENSE.md
+SECURITY.md
+tests/
+var/
+vendor/

@@ -1,0 +1,12 @@
+# Main application configuration for the Waffle Framework
+waffle:
+  # App environment (dev, prod, test). Set via server environment variable.
+  env: '%env(APP_ENV)%'
+  # Debug mode. Set to false in production for security.
+  debug: '%env(APP_DEBUG)%'
+  security:
+    level: 10
+  paths:
+    controllers: 'src/Controller'
+    services: 'src/Service'
+
