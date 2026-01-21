@@ -32,6 +32,7 @@
         "waffle-commons/contracts": "self.version",
         "waffle-commons/error-handler": "self.version",
         "waffle-commons/http": "self.version",
+        "waffle-commons/log": "self.version",
         "waffle-commons/pipeline": "self.version",
         "waffle-commons/routing": "self.version",
         "waffle-commons/runtime": "self.version",

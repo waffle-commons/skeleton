@@ -19,12 +19,13 @@ $debug = filter_var($_ENV[Constant::APP_DEBUG] ?? false, FILTER_VALIDATE_BOOL);
 // 1. Context & Glue
 // We use the Factory to create the concrete implementations
 $kernel = AppKernelFactory::create(env: $env, debug: $debug);
-$request = AppKernelFactory::createRequest();
-$emitter = AppKernelFactory::createEmitter();
 
 // 2. Runtime (Agnostic)
-// The runtime now just orchestrates: Kernel + Request -> Emitter
-$runtime = new WaffleRuntime();
-
-// This fixes your Fatal Error by passing exactly 3 arguments:
-$runtime->run($kernel, $request, $emitter);
+// The runtime now just orchestrates: FrankenPHP Loop [Kernel + Request -> Emitter]
+$maxRequests = (int)($_SERVER['MAX_REQUESTS'] ?? 500);
+new WaffleRuntime(globalsFactory: AppKernelFactory::$globalsFactory)
+    ->loop(
+        kernel: $kernel,
+        maxRequests: $maxRequests
+    )
+;
