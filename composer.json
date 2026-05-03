@@ -2,7 +2,7 @@
     "name": "waffle-commons/skeleton",
     "description": "The official skeleton for Waffle Framework applications.",
     "type": "project",
-    "version": "0.1.0-alpha4",
+    "version": "0.1.0-alpha5",
     "license": "MIT",
     "autoload": {
         "psr-4": {
@@ -31,6 +31,7 @@
         "waffle-commons/container": "self.version",
         "waffle-commons/contracts": "self.version",
         "waffle-commons/error-handler": "self.version",
+        "waffle-commons/event-dispatcher": "self.version",
         "waffle-commons/http": "self.version",
         "waffle-commons/log": "self.version",
         "waffle-commons/pipeline": "self.version",

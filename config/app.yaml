@@ -14,4 +14,9 @@ waffle:
   paths:
     controllers: 'src/Controller'
     services: 'src/Service'
+    event_listeners: 'app/EventListener'
+  # Logging configuration (PSR-3)
+  log:
+    channel: app
+    stream: 'php://stderr'
 

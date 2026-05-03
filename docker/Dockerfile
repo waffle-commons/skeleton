@@ -4,8 +4,8 @@
 # Waffle Framework - Multi-Stage Dockerfile
 # Supports both Development (with Xdebug) and Production (Optimized).
 #
-ARG FRANKEN_VERSION='1.10.1'
-ARG PHP_VERSION='8.5.0'
+ARG FRANKEN_VERSION='1.12.2'
+ARG PHP_VERSION='8'
 ARG OS='trixie'
 
 # -----------------------------------------------------------------------------
