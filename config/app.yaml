@@ -4,9 +4,19 @@ waffle:
   env: '%env(APP_ENV)%'
   # Debug mode. Set to false in production for security.
   debug: '%env(APP_DEBUG)%'
+  # Security Hardening: Trusted Hosts
+  # List of allowed domains. If empty, all hosts are allowed (DEV only).
+  # In PROD, this MUST be configured to prevent Host Header Injection.
+  trusted_hosts:
+    - localhost
   security:
     level: 10
   paths:
     controllers: 'src/Controller'
     services: 'src/Service'
+    event_listeners: 'app/EventListener'
+  # Logging configuration (PSR-3)
+  log:
+    channel: app
+    stream: 'php://stderr'
 
