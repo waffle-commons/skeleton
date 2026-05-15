@@ -446,7 +446,7 @@
             "require": {
                 "ext-yaml": "*",
                 "php": "^8.5",
-                "waffle-commons/contracts": "self.version"
+                "waffle-commons/contracts": "^0.1.0-alpha6"
             },
             "require-dev": {
                 "carthage-software/mago": "^1.0.0-rc",
@@ -494,7 +494,7 @@
             "require": {
                 "php": "^8.5",
                 "psr/container": "^2.0",
-                "waffle-commons/contracts": "self.version"
+                "waffle-commons/contracts": "^0.1.0-alpha6"
             },
             "require-dev": {
                 "carthage-software/mago": "^1.0.0-rc",
@@ -596,7 +596,7 @@
                 "php": "^8.5",
                 "psr/http-factory": "^1.1",
                 "psr/http-message": "^2.0",
-                "waffle-commons/contracts": "self.version"
+                "waffle-commons/contracts": "^0.1.0-alpha6"
             },
             "require-dev": {
                 "carthage-software/mago": "^1.0.0-rc",
@@ -645,7 +645,7 @@
                 "php": "^8.5",
                 "psr/http-factory": "^1.1",
                 "psr/http-message": "^2.0",
-                "waffle-commons/contracts": "self.version"
+                "waffle-commons/contracts": "^0.1.0-alpha6"
             },
             "require-dev": {
                 "carthage-software/mago": "^1.0.0-rc",
@@ -694,7 +694,7 @@
                 "php": "^8.5",
                 "psr/http-server-handler": "^1.0",
                 "psr/http-server-middleware": "^1.0",
-                "waffle-commons/contracts": "self.version"
+                "waffle-commons/contracts": "^0.1.0-alpha6"
             },
             "require-dev": {
                 "carthage-software/mago": "^1.0.0-rc",
@@ -742,8 +742,8 @@
             "require": {
                 "php": "^8.5",
                 "psr/http-message": "^2.0",
-                "waffle-commons/contracts": "self.version",
-                "waffle-commons/utils": "self.version"
+                "waffle-commons/contracts": "^0.1.0-alpha6",
+                "waffle-commons/utils": "^0.1.0-alpha6"
             },
             "require-dev": {
                 "carthage-software/mago": "^1.0.0-rc",
@@ -792,7 +792,7 @@
                 "php": "^8.5",
                 "psr/container": "^2.0",
                 "psr/http-message": "^1.1 || ^2.0",
-                "waffle-commons/contracts": "self.version"
+                "waffle-commons/contracts": "^0.1.0-alpha6"
             },
             "require-dev": {
                 "carthage-software/mago": "^1.0.0-rc",
@@ -840,8 +840,8 @@
             "require": {
                 "php": "^8.5",
                 "psr/container": "^2.0",
-                "waffle-commons/contracts": "self.version",
-                "waffle-commons/utils": "self.version"
+                "waffle-commons/contracts": "^0.1.0-alpha6",
+                "waffle-commons/utils": "^0.1.0-alpha6"
             },
             "require-dev": {
                 "carthage-software/mago": "^1.0.0-rc",
@@ -888,7 +888,7 @@
             },
             "require": {
                 "php": "^8.5",
-                "waffle-commons/contracts": "self.version"
+                "waffle-commons/contracts": "^0.1.0-alpha6"
             },
             "require-dev": {
                 "carthage-software/mago": "^1.0.0-rc",
@@ -942,8 +942,8 @@
                 "psr/http-server-handler": "^1.0",
                 "psr/http-server-middleware": "^1.0@dev",
                 "psr/log": "^3.0",
-                "waffle-commons/contracts": "self.version",
-                "waffle-commons/utils": "self.version"
+                "waffle-commons/contracts": "^0.1.0-alpha6",
+                "waffle-commons/utils": "^0.1.0-alpha6"
             },
             "require-dev": {
                 "carthage-software/mago": "^1.0.0-rc",
