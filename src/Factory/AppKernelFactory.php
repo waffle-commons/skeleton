@@ -25,6 +25,7 @@ use Waffle\Commons\Log\StreamLogger;
 use Waffle\Commons\Pipeline\CoreRoutingMiddleware;
 use Waffle\Commons\Pipeline\MiddlewareStack;
 use Waffle\Commons\Pipeline\Middleware\SecureHeadersMiddleware;
+use Waffle\Commons\Pipeline\Middleware\TrustedHostMiddleware;
 use Waffle\Commons\Routing\Router;
 use Waffle\Commons\Security\Container\SecureContainer;
 use Waffle\Commons\Security\Middleware\SecurityMiddleware;
@@ -61,9 +62,10 @@ final class AppKernelFactory
             configDir: $rootConfig,
             environment: $env,
         );
-        // Prepare GlobalsFactory for trusted_hosts configuration
+        // GlobalsFactory only constructs the PSR-7 ServerRequest; trusted-host enforcement
+        // moved to TrustedHostMiddleware (Alpha 6 P0, RFC-003 §3.2).
         $trustedHosts = $config->getArray(key: 'waffle.trusted_hosts');
-        self::$globalsFactory = new GlobalsFactory(trustedHosts: $trustedHosts);
+        self::$globalsFactory = new GlobalsFactory();
 
         // 3. Instantiate Security (from waffle-commons/security)
         $security = new Security($config);
@@ -84,6 +86,10 @@ final class AppKernelFactory
         );
 
         $stack->prepend($errorHandler);
+
+        // 5a. Host header allowlist — fail-fast before routing/security/dispatch.
+        // Canonical order (RFC-003): ErrorHandler → TrustedHost → Routing → Security → SecureHeaders → Dispatcher.
+        $stack->add(new TrustedHostMiddleware($trustedHosts));
 
         // 5b. Event Dispatcher setup
         $listenerProvider = new ListenerProvider();
