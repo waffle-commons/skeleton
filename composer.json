@@ -2,7 +2,7 @@
     "name": "waffle-commons/skeleton",
     "description": "The official skeleton for Waffle Framework applications.",
     "type": "project",
-    "version": "0.1.0-alpha5",
+    "version": "0.1.0-beta0",
     "license": "MIT",
     "autoload": {
         "psr-4": {
@@ -30,7 +30,7 @@
         "waffle-commons/cache": "self.version",
         "waffle-commons/config": "self.version",
         "waffle-commons/container": "self.version",
-        "waffle-commons/contracts": "^0.1.0-alpha6",
+        "waffle-commons/contracts": "self.version",
         "waffle-commons/error-handler": "self.version",
         "waffle-commons/event-dispatcher": "self.version",
         "waffle-commons/http": "self.version",
@@ -39,7 +39,7 @@
         "waffle-commons/routing": "self.version",
         "waffle-commons/runtime": "self.version",
         "waffle-commons/security": "self.version",
-        "waffle-commons/utils": "^0.1.0-alpha6",
+        "waffle-commons/utils": "self.version",
         "waffle-commons/waffle": "self.version"
     },
     "require-dev": {
@@ -64,5 +64,119 @@
             "php-http/discovery": true
         },
         "sort-packages": true
-    }
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "canonical": false,
+            "url": "../cache",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "path",
+            "canonical": false,
+            "url": "../config",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "path",
+            "canonical": false,
+            "url": "../container",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "path",
+            "canonical": false,
+            "url": "../contracts",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "path",
+            "canonical": false,
+            "url": "../error-handler",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "path",
+            "canonical": false,
+            "url": "../event-dispatcher",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "path",
+            "canonical": false,
+            "url": "../http",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "path",
+            "canonical": false,
+            "url": "../log",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "path",
+            "canonical": false,
+            "url": "../pipeline",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "path",
+            "canonical": false,
+            "url": "../routing",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "path",
+            "canonical": false,
+            "url": "../runtime",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "path",
+            "canonical": false,
+            "url": "../security",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "path",
+            "canonical": false,
+            "url": "../utils",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "path",
+            "canonical": false,
+            "url": "../waffle",
+            "options": {
+                "symlink": true
+            }
+        }
+    ]
 }

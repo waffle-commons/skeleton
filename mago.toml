@@ -1,4 +1,4 @@
-# Mago Configuration - Waffle Commons Alpha 5
+# Mago Configuration - Waffle Commons Skeleton (Beta 0)
 # For full documentation, see https://mago.carthage.software/tools/overview
 php-version = "8.5.5"
 
@@ -6,6 +6,37 @@ php-version = "8.5.5"
 paths = ["src/", "tests/"]
 includes = ["vendor"]
 excludes = []
+
+# -----------------------------------------------------------------------------
+# Mago Guard — Beta 0 standardized architectural perimeter
+# -----------------------------------------------------------------------------
+# The skeleton is a starter application. Its userland code lives under `App\`
+# and may consume the entire waffle-commons ecosystem and the `Waffle\`
+# framework facade.
+[guard]
+mode = "default"
+excludes = ["tests/bootstrap.php"]
+
+[guard.perimeter]
+layering = ["App", "AppTests"]
+
+[guard.perimeter.layers]
+core = ["@global", "Psl\\**"]
+psr = ["Psr\\**"]
+waffle = ["Waffle\\**", "Waffle\\Commons\\**"]
+
+[[guard.perimeter.rules]]
+namespace = "App"
+permit = [
+    "App\\**",
+    "@layer:core",
+    "@layer:psr",
+    "@layer:waffle",
+]
+
+[[guard.perimeter.rules]]
+namespace = "AppTests"
+permit = ["@all"]
 
 [formatter]
 print-width = 120
@@ -16,7 +47,7 @@ trailing-comma = true
 end-of-line = "lf"
 
 [linter]
-baseline = "mago-linter-baseline.toml"
+# Zero-Baseline policy (Beta 0): no `baseline = ...` is permitted.
 integrations = ["phpunit"]
 
 [linter.rules]
@@ -39,7 +70,7 @@ prefer-arrow-function = { level = "note" }
 no-redundant-nullsafe = { level = "note" }
 
 [analyzer]
-baseline = "mago-analyzer-baseline.toml"
+# Zero-Baseline policy (Beta 0): no `baseline = ...` is permitted.
 find-unused-definitions = true
 find-unused-expressions = true
 analyze-dead-code = true
