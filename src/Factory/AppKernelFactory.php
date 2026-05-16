@@ -23,7 +23,7 @@ use Waffle\Commons\EventDispatcher\Provider\ListenerProvider;
 use Waffle\Commons\Http\Emitter\ResponseEmitter;
 use Waffle\Commons\Http\Factory\GlobalsFactory;
 use Waffle\Commons\Http\Factory\ResponseFactory;
-use Waffle\Commons\Log\Enum\LogChannel;
+use Waffle\Commons\Log\Channel\LogChannel;
 use Waffle\Commons\Log\StreamLogger;
 use Waffle\Commons\Pipeline\CoreRoutingMiddleware;
 use Waffle\Commons\Pipeline\MiddlewareStack;
@@ -175,7 +175,7 @@ final class AppKernelFactory
      * Falls back to the in-memory ArrayCache when no adapter is configured — never
      * crashes the framework boot just because the cache section is missing.
      */
-    private static function buildCache(string $root, Config $config): CacheInterface
+    public static function buildCache(string $root, Config $config): CacheInterface
     {
         $adapter = $config->getString('waffle.cache.adapter') ?? CacheConstant::BACKEND_ARRAY;
         $directory = $config->getString('waffle.cache.directory') ?? 'var/cache/psr16';

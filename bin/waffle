@@ -1,0 +1,57 @@
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Reference entry point for the `waffle` CLI.
+ *
+ * Skeleton-shipped projects ship their own bin/waffle.php that wires the
+ * concrete cache + router + container; this file is a minimal reference
+ * showing the expected boot shape.
+ *
+ * Usage:
+ *   php vendor/bin/waffle <command> [options...]
+ *   php vendor/bin/waffle list
+ */
+
+use App\Factory\AppKernelFactory;
+use Waffle\Commons\Config\Config;
+use Waffle\Commons\Console\Command\CacheClearCommand;
+use Waffle\Commons\Console\Command\RouteListCommand;
+use Waffle\Commons\Console\Command\SecurityAuditCommand;
+use Waffle\Commons\Console\ConsoleApplication;
+use Waffle\Commons\Console\Output\StreamOutput;
+use Waffle\Commons\Container\Container;
+use Waffle\Commons\Contracts\Constant\Constant;
+use Waffle\Commons\Routing\Router;
+use Waffle\Commons\Security\Container\SecureContainer;
+use Waffle\Commons\Security\Security;
+
+require_once __DIR__ . '/../vendor/autoload.php';
+
+/** @var string $root */
+$root = realpath(path: dirname(path: __DIR__));
+$rootConfig = $root . DIRECTORY_SEPARATOR . 'config';
+
+// Setting up the framework
+$container = new Container();
+$config = new Config(configDir: $rootConfig, environment: Constant::ENV_DEV);
+$security = new Security($config);
+$secureContainer = new SecureContainer($container, $security);
+$cache = AppKernelFactory::buildCache($root, $config);
+$router = new Router(directory: $config->getString(key: 'waffle.paths.controllers'));
+
+// Console application
+$app = new ConsoleApplication(
+    name: 'Waffle',
+    version: '0.1.0-beta0',
+    output: new StreamOutput(),
+);
+
+
+// Adding commands
+$app->add(command: new RouteListCommand(router: $router->boot(container: $secureContainer)));
+$app->add(command: new SecurityAuditCommand(router: $router->boot(container: $secureContainer)));
+$app->add(command: new CacheClearCommand(cache: $cache));
+
+exit($app->run());
