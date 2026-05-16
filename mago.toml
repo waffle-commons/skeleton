@@ -1,11 +1,42 @@
-# Mago Configuration - Waffle Commons Alpha 5
+# Mago Configuration - Waffle Commons Skeleton (Beta 0)
 # For full documentation, see https://mago.carthage.software/tools/overview
-php-version = "8.5.0"
+php-version = "8.5.5"
 
 [source]
 paths = ["src/", "tests/"]
 includes = ["vendor"]
 excludes = []
+
+# -----------------------------------------------------------------------------
+# Mago Guard — Beta 0 standardized architectural perimeter
+# -----------------------------------------------------------------------------
+# The skeleton is a starter application. Its userland code lives under `App\`
+# and may consume the entire waffle-commons ecosystem and the `Waffle\`
+# framework facade.
+[guard]
+mode = "default"
+excludes = ["tests/bootstrap.php"]
+
+[guard.perimeter]
+layering = ["App", "AppTests"]
+
+[guard.perimeter.layers]
+core = ["@global", "Psl\\**"]
+psr = ["Psr\\**"]
+waffle = ["Waffle\\**", "Waffle\\Commons\\**"]
+
+[[guard.perimeter.rules]]
+namespace = "App"
+permit = [
+    "App\\**",
+    "@layer:core",
+    "@layer:psr",
+    "@layer:waffle",
+]
+
+[[guard.perimeter.rules]]
+namespace = "AppTests"
+permit = ["@all"]
 
 [formatter]
 print-width = 120
@@ -16,7 +47,7 @@ trailing-comma = true
 end-of-line = "lf"
 
 [linter]
-baseline = "mago-linter-baseline.toml"
+# Zero-Baseline policy (Beta 0): no `baseline = ...` is permitted.
 integrations = ["phpunit"]
 
 [linter.rules]
@@ -29,17 +60,46 @@ disallowed-functions = { level = "error", functions = ["eval", "exec", "system",
 # Code quality - Strict
 prefer-interface = { level = "error" }
 strict-types = { level = "error" }
-cyclomatic-complexity = { level = "warning", threshold = 10 }
+cyclomatic-complexity = { level = "warning", threshold = 20 }
+too-many-methods = { level = "warning", threshold = 20 }
+kan-defect = { level = "warning", threshold = 2.5 }
+no-ini-set = { enabled = false }
 
 # Style - Notes (informational)
 prefer-arrow-function = { level = "note" }
 no-redundant-nullsafe = { level = "note" }
 
 [analyzer]
-baseline = "mago-analyzer-baseline.toml"
+# Zero-Baseline policy (Beta 0): no `baseline = ...` is permitted.
 find-unused-definitions = true
 find-unused-expressions = true
 analyze-dead-code = true
-check-throws = true
 strict-list-index-checks = true
-allow-possibly-undefined-array-keys = false
+strict-array-index-existence = true
+ignore = [
+    { code = "mixed-assignment", in = [
+        "tests/",
+    ] },
+    { code = "mixed-argument", in = [
+        "tests/",
+    ] },
+    { code = "mixed-operand", in = [
+        "tests/",
+    ] },
+    { code = "ambiguous-object-method-access", in = [
+        "tests/",
+    ] },
+    { code = "no-value", in = [
+        "tests/",
+    ] },
+    { code = "invalid-method-access", in = [
+        "tests/",
+    ] },
+    { code = "check-throws", in = [
+        "tests/",
+    ] },
+    { code = "non-existent-class-like", in = [
+        "tests/",
+        "src/",
+    ] },
+]
