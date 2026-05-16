@@ -6,8 +6,11 @@ namespace App\Factory;
 
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Waffle\Commons\Cache\Factory\CacheFactory;
 use Waffle\Commons\Config\Config;
 use Waffle\Commons\Container\Container;
+use Waffle\Commons\Contracts\Cache\CacheInterface;
+use Waffle\Commons\Contracts\Cache\Constant as CacheConstant;
 use Waffle\Commons\Contracts\Constant\Constant;
 use Waffle\Commons\Contracts\Core\KernelInterface;
 use Waffle\Commons\Contracts\EventDispatcher\EventDispatcherInterface;
@@ -106,11 +109,15 @@ final class AppKernelFactory
         $kernel = new Kernel(logger: $kernelLogger);
         $kernel->setEventDispatcher($eventDispatcher);
 
-        // 7. Instantiate and Boot Router
+        // 7. Instantiate the PSR-16 cache (RFC-013) and register it for downstream consumers.
+        $cache = self::buildCache($root, $config);
+        $container->set(CacheInterface::class, $cache);
+
+        // 8. Instantiate and Boot Router
         $controllersPath = $config->getString('waffle.paths.controllers');
         if (is_string($controllersPath)) {
-            // Instantiate Router
-            $router = new Router($root . DIRECTORY_SEPARATOR . $controllersPath);
+            // Instantiate Router with the shared PSR-16 cache
+            $router = new Router($root . DIRECTORY_SEPARATOR . $controllersPath, $cache);
             $router->boot($secureContainer);
 
             // Create the Bridge Middleware and add it to the Stack
@@ -126,7 +133,7 @@ final class AppKernelFactory
             $stack->add(new SecureHeadersMiddleware());
         }
 
-        // 8. Inject Dependencies
+        // 9. Inject Dependencies
         if (method_exists($kernel, 'setConfiguration')) {
             $kernel->setConfiguration($config);
         }
@@ -160,6 +167,26 @@ final class AppKernelFactory
     public static function createEmitter(): ResponseEmitterInterface
     {
         return new ResponseEmitter();
+    }
+
+    /**
+     * Builds the PSR-16 cache adapter chosen by `waffle.cache.adapter`.
+     *
+     * Falls back to the in-memory ArrayCache when no adapter is configured — never
+     * crashes the framework boot just because the cache section is missing.
+     */
+    private static function buildCache(string $root, Config $config): CacheInterface
+    {
+        $adapter = $config->getString('waffle.cache.adapter') ?? CacheConstant::BACKEND_ARRAY;
+        $directory = $config->getString('waffle.cache.directory') ?? 'var/cache/psr16';
+        $options = [
+            'directory' => $root . DIRECTORY_SEPARATOR . $directory,
+            'dsn' => $config->getString('waffle.cache.redis_dsn'),
+            'default_ttl' => $config->getInt('waffle.cache.default_ttl'),
+            'prefix' => $config->getString('waffle.cache.prefix'),
+        ];
+
+        return new CacheFactory()->create($adapter, $options);
     }
 
     /**

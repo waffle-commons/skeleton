@@ -27,6 +27,7 @@
         "php": "^8.5",
         "ext-yaml": "*",
         "ext-zend-opcache": "*",
+        "waffle-commons/cache": "self.version",
         "waffle-commons/config": "self.version",
         "waffle-commons/container": "self.version",
         "waffle-commons/contracts": "^0.1.0-alpha6",
