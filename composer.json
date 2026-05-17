@@ -21,7 +21,7 @@
             "email": "contact@waffle-commons.cloud"
         }
     ],
-    "minimum-stability": "alpha",
+    "minimum-stability": "beta",
     "prefer-stable": true,
     "require": {
         "php": "^8.5",
@@ -65,119 +65,5 @@
             "php-http/discovery": true
         },
         "sort-packages": true
-    },
-    "repositories": [
-        {
-            "type": "path",
-            "canonical": false,
-            "url": "../cache",
-            "options": {
-                "symlink": true
-            }
-        },
-        {
-            "type": "path",
-            "canonical": false,
-            "url": "../config",
-            "options": {
-                "symlink": true
-            }
-        },
-        {
-            "type": "path",
-            "canonical": false,
-            "url": "../container",
-            "options": {
-                "symlink": true
-            }
-        },
-        {
-            "type": "path",
-            "canonical": false,
-            "url": "../contracts",
-            "options": {
-                "symlink": true
-            }
-        },
-        {
-            "type": "path",
-            "canonical": false,
-            "url": "../error-handler",
-            "options": {
-                "symlink": true
-            }
-        },
-        {
-            "type": "path",
-            "canonical": false,
-            "url": "../event-dispatcher",
-            "options": {
-                "symlink": true
-            }
-        },
-        {
-            "type": "path",
-            "canonical": false,
-            "url": "../http",
-            "options": {
-                "symlink": true
-            }
-        },
-        {
-            "type": "path",
-            "canonical": false,
-            "url": "../log",
-            "options": {
-                "symlink": true
-            }
-        },
-        {
-            "type": "path",
-            "canonical": false,
-            "url": "../pipeline",
-            "options": {
-                "symlink": true
-            }
-        },
-        {
-            "type": "path",
-            "canonical": false,
-            "url": "../routing",
-            "options": {
-                "symlink": true
-            }
-        },
-        {
-            "type": "path",
-            "canonical": false,
-            "url": "../runtime",
-            "options": {
-                "symlink": true
-            }
-        },
-        {
-            "type": "path",
-            "canonical": false,
-            "url": "../security",
-            "options": {
-                "symlink": true
-            }
-        },
-        {
-            "type": "path",
-            "canonical": false,
-            "url": "../utils",
-            "options": {
-                "symlink": true
-            }
-        },
-        {
-            "type": "path",
-            "canonical": false,
-            "url": "../waffle",
-            "options": {
-                "symlink": true
-            }
-        }
-    ]
+    }
 }

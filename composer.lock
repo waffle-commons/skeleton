@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "a3d0b54c4fd1e6139f47eb9823689555",
+    "content-hash": "ebb2e4f7b41fb5dd5408d7db17c9b0a2",
     "packages": [
         {
             "name": "predis/predis",
@@ -545,10 +545,16 @@
         {
             "name": "waffle-commons/cache",
             "version": "0.1.0-beta0",
-            "dist": {
-                "type": "path",
-                "url": "../cache",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/waffle-commons/cache.git",
                 "reference": "6016dc89348a297664fdc3fd1ae649dd6c9f1be8"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/waffle-commons/cache/zipball/6016dc89348a297664fdc3fd1ae649dd6c9f1be8",
+                "reference": "6016dc89348a297664fdc3fd1ae649dd6c9f1be8",
+                "shasum": ""
             },
             "require": {
                 "php": "^8.5",
@@ -568,51 +574,7 @@
                     "Waffle\\Commons\\Cache\\": "src/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "WaffleTests\\Commons\\Cache\\": "tests/src/"
-                }
-            },
-            "scripts": {
-                "formatter": [
-                    "vendor/bin/mago fmt"
-                ],
-                "linter": [
-                    "vendor/bin/mago lint"
-                ],
-                "analyzer": [
-                    "vendor/bin/mago analyze"
-                ],
-                "guard": [
-                    "vendor/bin/mago guard"
-                ],
-                "phpunit": [
-                    "vendor/bin/phpunit --log-junit var/data/phpunit-coverage/junit.xml --coverage-html var/data/phpunit-coverage"
-                ],
-                "benchmark": [
-                    "Composer\\Config::disableProcessTimeout",
-                    "vendor/bin/phpbench run --report=default_report --output=waffle_html --retry-threshold=10"
-                ],
-                "mago": [
-                    "@formatter",
-                    "@linter",
-                    "@analyzer",
-                    "@guard"
-                ],
-                "tests": [
-                    "@phpunit"
-                ],
-                "scan": [
-                    "@mago",
-                    "@tests"
-                ],
-                "ci": [
-                    "@mago",
-                    "@tests",
-                    "composer audit",
-                    "vendor/bin/psalm --taint-analysis"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -623,18 +585,25 @@
                 }
             ],
             "description": "Cache component for Waffle framework.",
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "support": {
+                "issues": "https://github.com/waffle-commons/cache/issues",
+                "source": "https://github.com/waffle-commons/cache/tree/0.1.0-beta0"
+            },
+            "time": "2026-05-16T14:35:28+00:00"
         },
         {
             "name": "waffle-commons/config",
             "version": "0.1.0-beta0",
-            "dist": {
-                "type": "path",
-                "url": "../config",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/waffle-commons/config.git",
                 "reference": "bf8f510c76a8d4a4e57c56e7d68d9204a22b1499"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/waffle-commons/config/zipball/bf8f510c76a8d4a4e57c56e7d68d9204a22b1499",
+                "reference": "bf8f510c76a8d4a4e57c56e7d68d9204a22b1499",
+                "shasum": ""
             },
             "require": {
                 "ext-yaml": "*",
@@ -654,51 +623,7 @@
                     "Waffle\\Commons\\Config\\": "src/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "WaffleTests\\Commons\\Config\\": "tests/src/"
-                }
-            },
-            "scripts": {
-                "formatter": [
-                    "vendor/bin/mago fmt"
-                ],
-                "linter": [
-                    "vendor/bin/mago lint"
-                ],
-                "analyzer": [
-                    "vendor/bin/mago analyze"
-                ],
-                "guard": [
-                    "vendor/bin/mago guard"
-                ],
-                "phpunit": [
-                    "vendor/bin/phpunit --log-junit var/data/phpunit-coverage/junit.xml --coverage-html var/data/phpunit-coverage"
-                ],
-                "benchmark": [
-                    "Composer\\Config::disableProcessTimeout",
-                    "vendor/bin/phpbench run --report=default_report --output=waffle_html --retry-threshold=10"
-                ],
-                "mago": [
-                    "@formatter",
-                    "@linter",
-                    "@analyzer",
-                    "@guard"
-                ],
-                "tests": [
-                    "@phpunit"
-                ],
-                "scan": [
-                    "@mago",
-                    "@tests"
-                ],
-                "ci": [
-                    "@mago",
-                    "@tests",
-                    "composer audit",
-                    "vendor/bin/psalm --taint-analysis"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -709,10 +634,11 @@
                 }
             ],
             "description": "Config component for Waffle framework.",
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "support": {
+                "issues": "https://github.com/waffle-commons/config/issues",
+                "source": "https://github.com/waffle-commons/config/tree/0.1.0-beta0"
+            },
+            "time": "2026-05-16T14:22:42+00:00"
         },
         {
             "name": "waffle-commons/console",
@@ -765,10 +691,16 @@
         {
             "name": "waffle-commons/container",
             "version": "0.1.0-beta0",
-            "dist": {
-                "type": "path",
-                "url": "../container",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/waffle-commons/container.git",
                 "reference": "8ec8a6b2e7849cff597ea88a28cb433514eef1e1"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/waffle-commons/container/zipball/8ec8a6b2e7849cff597ea88a28cb433514eef1e1",
+                "reference": "8ec8a6b2e7849cff597ea88a28cb433514eef1e1",
+                "shasum": ""
             },
             "require": {
                 "php": "^8.5",
@@ -788,51 +720,7 @@
                     "Waffle\\Commons\\Container\\": "src/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "WaffleTests\\Commons\\Container\\": "tests/src/"
-                }
-            },
-            "scripts": {
-                "formatter": [
-                    "vendor/bin/mago fmt"
-                ],
-                "linter": [
-                    "vendor/bin/mago lint"
-                ],
-                "analyzer": [
-                    "vendor/bin/mago analyze"
-                ],
-                "guard": [
-                    "vendor/bin/mago guard"
-                ],
-                "phpunit": [
-                    "vendor/bin/phpunit --log-junit var/data/phpunit-coverage/junit.xml --coverage-html var/data/phpunit-coverage"
-                ],
-                "benchmark": [
-                    "Composer\\Config::disableProcessTimeout",
-                    "vendor/bin/phpbench run --report=default_report --output=waffle_html --retry-threshold=10"
-                ],
-                "mago": [
-                    "@formatter",
-                    "@linter",
-                    "@analyzer",
-                    "@guard"
-                ],
-                "tests": [
-                    "@phpunit"
-                ],
-                "scan": [
-                    "@mago",
-                    "@tests"
-                ],
-                "ci": [
-                    "@mago",
-                    "@tests",
-                    "composer audit",
-                    "vendor/bin/psalm --taint-analysis"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -843,18 +731,25 @@
                 }
             ],
             "description": "Container component for Waffle framework.",
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "support": {
+                "issues": "https://github.com/waffle-commons/container/issues",
+                "source": "https://github.com/waffle-commons/container/tree/0.1.0-beta0"
+            },
+            "time": "2026-05-16T14:15:15+00:00"
         },
         {
             "name": "waffle-commons/contracts",
             "version": "0.1.0-beta0",
-            "dist": {
-                "type": "path",
-                "url": "../contracts",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/waffle-commons/contracts.git",
                 "reference": "1d3c2943a1cb2b14c98e768b12d2dbd183728175"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/waffle-commons/contracts/zipball/1d3c2943a1cb2b14c98e768b12d2dbd183728175",
+                "reference": "1d3c2943a1cb2b14c98e768b12d2dbd183728175",
+                "shasum": ""
             },
             "require": {
                 "php": "^8.5",
@@ -880,51 +775,7 @@
                     "Waffle\\Commons\\Contracts\\": "src/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "WaffleTests\\Commons\\Contracts\\": "tests/src/"
-                }
-            },
-            "scripts": {
-                "formatter": [
-                    "vendor/bin/mago fmt"
-                ],
-                "linter": [
-                    "vendor/bin/mago lint"
-                ],
-                "analyzer": [
-                    "vendor/bin/mago analyze"
-                ],
-                "guard": [
-                    "vendor/bin/mago guard"
-                ],
-                "phpunit": [
-                    "vendor/bin/phpunit --log-junit var/data/phpunit-coverage/junit.xml --coverage-html var/data/phpunit-coverage"
-                ],
-                "benchmark": [
-                    "Composer\\Config::disableProcessTimeout",
-                    "vendor/bin/phpbench run --report=default_report --output=waffle_html --retry-threshold=10"
-                ],
-                "mago": [
-                    "@formatter",
-                    "@linter",
-                    "@analyzer",
-                    "@guard"
-                ],
-                "tests": [
-                    "@phpunit"
-                ],
-                "scan": [
-                    "@mago",
-                    "@tests"
-                ],
-                "ci": [
-                    "@mago",
-                    "@tests",
-                    "composer audit",
-                    "vendor/bin/psalm --taint-analysis"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -935,18 +786,25 @@
                 }
             ],
             "description": "Contracts component for Waffle framework.",
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "support": {
+                "issues": "https://github.com/waffle-commons/contracts/issues",
+                "source": "https://github.com/waffle-commons/contracts/tree/0.1.0-beta0"
+            },
+            "time": "2026-05-16T13:54:29+00:00"
         },
         {
             "name": "waffle-commons/error-handler",
             "version": "0.1.0-beta0",
-            "dist": {
-                "type": "path",
-                "url": "../error-handler",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/waffle-commons/error-handler.git",
                 "reference": "333ecf5554cccabee01421980aca6cdba7ca2c5e"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/waffle-commons/error-handler/zipball/333ecf5554cccabee01421980aca6cdba7ca2c5e",
+                "reference": "333ecf5554cccabee01421980aca6cdba7ca2c5e",
+                "shasum": ""
             },
             "require": {
                 "php": "^8.5",
@@ -968,51 +826,7 @@
                     "Waffle\\Commons\\ErrorHandler\\": "src/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "WaffleTests\\Commons\\ErrorHandler\\": "tests/src/"
-                }
-            },
-            "scripts": {
-                "formatter": [
-                    "vendor/bin/mago fmt"
-                ],
-                "linter": [
-                    "vendor/bin/mago lint"
-                ],
-                "analyzer": [
-                    "vendor/bin/mago analyze"
-                ],
-                "guard": [
-                    "vendor/bin/mago guard"
-                ],
-                "phpunit": [
-                    "vendor/bin/phpunit --log-junit var/data/phpunit-coverage/junit.xml --coverage-html var/data/phpunit-coverage"
-                ],
-                "benchmark": [
-                    "Composer\\Config::disableProcessTimeout",
-                    "vendor/bin/phpbench run --report=default_report --output=waffle_html --retry-threshold=10"
-                ],
-                "mago": [
-                    "@formatter",
-                    "@linter",
-                    "@analyzer",
-                    "@guard"
-                ],
-                "tests": [
-                    "@phpunit"
-                ],
-                "scan": [
-                    "@mago",
-                    "@tests"
-                ],
-                "ci": [
-                    "@mago",
-                    "@tests",
-                    "composer audit",
-                    "vendor/bin/psalm --taint-analysis"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -1023,18 +837,25 @@
                 }
             ],
             "description": "ErrorHandler component for Waffle framework.",
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "support": {
+                "issues": "https://github.com/waffle-commons/error-handler/issues",
+                "source": "https://github.com/waffle-commons/error-handler/tree/0.1.0-beta0"
+            },
+            "time": "2026-05-16T14:59:28+00:00"
         },
         {
             "name": "waffle-commons/event-dispatcher",
             "version": "0.1.0-beta0",
-            "dist": {
-                "type": "path",
-                "url": "../event-dispatcher",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/waffle-commons/event-dispatcher.git",
                 "reference": "287fdd1aa8b0b24408b4c2c7fcfbfb4844d881b5"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/waffle-commons/event-dispatcher/zipball/287fdd1aa8b0b24408b4c2c7fcfbfb4844d881b5",
+                "reference": "287fdd1aa8b0b24408b4c2c7fcfbfb4844d881b5",
+                "shasum": ""
             },
             "require": {
                 "php": "^8.5",
@@ -1054,51 +875,7 @@
                     "Waffle\\Commons\\EventDispatcher\\": "src/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "WaffleTests\\Commons\\EventDispatcher\\": "tests/src/"
-                }
-            },
-            "scripts": {
-                "formatter": [
-                    "vendor/bin/mago fmt"
-                ],
-                "linter": [
-                    "vendor/bin/mago lint"
-                ],
-                "analyzer": [
-                    "vendor/bin/mago analyze"
-                ],
-                "guard": [
-                    "vendor/bin/mago guard"
-                ],
-                "phpunit": [
-                    "vendor/bin/phpunit --log-junit var/data/phpunit-coverage/junit.xml --coverage-html var/data/phpunit-coverage"
-                ],
-                "benchmark": [
-                    "Composer\\Config::disableProcessTimeout",
-                    "vendor/bin/phpbench run --report=default_report --output=waffle_html --retry-threshold=10"
-                ],
-                "mago": [
-                    "@formatter",
-                    "@linter",
-                    "@analyzer",
-                    "@guard"
-                ],
-                "tests": [
-                    "@phpunit"
-                ],
-                "scan": [
-                    "@mago",
-                    "@tests"
-                ],
-                "ci": [
-                    "@mago",
-                    "@tests",
-                    "composer audit",
-                    "vendor/bin/psalm --taint-analysis"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -1109,18 +886,25 @@
                 }
             ],
             "description": "Event Dispatcher component for Waffle framework.",
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "support": {
+                "issues": "https://github.com/waffle-commons/event-dispatcher/issues",
+                "source": "https://github.com/waffle-commons/event-dispatcher/tree/0.1.0-beta0"
+            },
+            "time": "2026-05-16T14:51:27+00:00"
         },
         {
             "name": "waffle-commons/http",
             "version": "0.1.0-beta0",
-            "dist": {
-                "type": "path",
-                "url": "../http",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/waffle-commons/http.git",
                 "reference": "d6305ce63d0171e3d145bbbdf495d389b53b837f"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/waffle-commons/http/zipball/d6305ce63d0171e3d145bbbdf495d389b53b837f",
+                "reference": "d6305ce63d0171e3d145bbbdf495d389b53b837f",
+                "shasum": ""
             },
             "require": {
                 "php": "^8.5",
@@ -1141,51 +925,7 @@
                     "Waffle\\Commons\\Http\\": "src/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "WaffleTests\\Commons\\Http\\": "tests/src/"
-                }
-            },
-            "scripts": {
-                "formatter": [
-                    "vendor/bin/mago fmt"
-                ],
-                "linter": [
-                    "vendor/bin/mago lint"
-                ],
-                "analyzer": [
-                    "vendor/bin/mago analyze"
-                ],
-                "guard": [
-                    "vendor/bin/mago guard"
-                ],
-                "phpunit": [
-                    "vendor/bin/phpunit --log-junit var/data/phpunit-coverage/junit.xml --coverage-html var/data/phpunit-coverage"
-                ],
-                "benchmark": [
-                    "Composer\\Config::disableProcessTimeout",
-                    "vendor/bin/phpbench run --report=default_report --output=waffle_html --retry-threshold=10"
-                ],
-                "mago": [
-                    "@formatter",
-                    "@linter",
-                    "@analyzer",
-                    "@guard"
-                ],
-                "tests": [
-                    "@phpunit"
-                ],
-                "scan": [
-                    "@mago",
-                    "@tests"
-                ],
-                "ci": [
-                    "@mago",
-                    "@tests",
-                    "composer audit",
-                    "vendor/bin/psalm --taint-analysis"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -1196,18 +936,25 @@
                 }
             ],
             "description": "Http component for Waffle framework.",
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "support": {
+                "issues": "https://github.com/waffle-commons/http/issues",
+                "source": "https://github.com/waffle-commons/http/tree/0.1.0-beta0"
+            },
+            "time": "2026-05-16T14:11:01+00:00"
         },
         {
             "name": "waffle-commons/log",
             "version": "0.1.0-beta0",
-            "dist": {
-                "type": "path",
-                "url": "../log",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/waffle-commons/log.git",
                 "reference": "a1da1f9658018abbb0331db3978ad483bddcfa7e"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/waffle-commons/log/zipball/a1da1f9658018abbb0331db3978ad483bddcfa7e",
+                "reference": "a1da1f9658018abbb0331db3978ad483bddcfa7e",
+                "shasum": ""
             },
             "require": {
                 "php": "^8.5",
@@ -1227,51 +974,7 @@
                     "Waffle\\Commons\\Log\\": "src/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "WaffleTests\\Commons\\Log\\": "tests/src/"
-                }
-            },
-            "scripts": {
-                "formatter": [
-                    "vendor/bin/mago fmt"
-                ],
-                "linter": [
-                    "vendor/bin/mago lint"
-                ],
-                "analyzer": [
-                    "vendor/bin/mago analyze"
-                ],
-                "guard": [
-                    "vendor/bin/mago guard"
-                ],
-                "phpunit": [
-                    "vendor/bin/phpunit --log-junit var/data/phpunit-coverage/junit.xml --coverage-html var/data/phpunit-coverage"
-                ],
-                "benchmark": [
-                    "Composer\\Config::disableProcessTimeout",
-                    "vendor/bin/phpbench run --report=default_report --output=waffle_html --retry-threshold=10"
-                ],
-                "mago": [
-                    "@formatter",
-                    "@linter",
-                    "@analyzer",
-                    "@guard"
-                ],
-                "tests": [
-                    "@phpunit"
-                ],
-                "scan": [
-                    "@mago",
-                    "@tests"
-                ],
-                "ci": [
-                    "@mago",
-                    "@tests",
-                    "composer audit",
-                    "vendor/bin/psalm --taint-analysis"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -1282,18 +985,25 @@
                 }
             ],
             "description": "Log component for Waffle framework.",
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "support": {
+                "issues": "https://github.com/waffle-commons/log/issues",
+                "source": "https://github.com/waffle-commons/log/tree/0.1.0-beta0"
+            },
+            "time": "2026-05-16T14:21:17+00:00"
         },
         {
             "name": "waffle-commons/pipeline",
             "version": "0.1.0-beta0",
-            "dist": {
-                "type": "path",
-                "url": "../pipeline",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/waffle-commons/pipeline.git",
                 "reference": "243c5977b1829b5594fe7a116a126e5567127dd6"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/waffle-commons/pipeline/zipball/243c5977b1829b5594fe7a116a126e5567127dd6",
+                "reference": "243c5977b1829b5594fe7a116a126e5567127dd6",
+                "shasum": ""
             },
             "require": {
                 "php": "^8.5",
@@ -1314,51 +1024,7 @@
                     "Waffle\\Commons\\Pipeline\\": "src/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "WaffleTests\\Commons\\Pipeline\\": "tests/src/"
-                }
-            },
-            "scripts": {
-                "formatter": [
-                    "vendor/bin/mago fmt"
-                ],
-                "linter": [
-                    "vendor/bin/mago lint"
-                ],
-                "analyzer": [
-                    "vendor/bin/mago analyze"
-                ],
-                "guard": [
-                    "vendor/bin/mago guard"
-                ],
-                "phpunit": [
-                    "vendor/bin/phpunit --log-junit var/data/phpunit-coverage/junit.xml --coverage-html var/data/phpunit-coverage"
-                ],
-                "benchmark": [
-                    "Composer\\Config::disableProcessTimeout",
-                    "vendor/bin/phpbench run --report=default_report --output=waffle_html --retry-threshold=10"
-                ],
-                "mago": [
-                    "@formatter",
-                    "@linter",
-                    "@analyzer",
-                    "@guard"
-                ],
-                "tests": [
-                    "@phpunit"
-                ],
-                "scan": [
-                    "@mago",
-                    "@tests"
-                ],
-                "ci": [
-                    "@mago",
-                    "@tests",
-                    "composer audit",
-                    "vendor/bin/psalm --taint-analysis"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -1369,18 +1035,25 @@
                 }
             ],
             "description": "Pipeline component for Waffle framework.",
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "support": {
+                "issues": "https://github.com/waffle-commons/pipeline/issues",
+                "source": "https://github.com/waffle-commons/pipeline/tree/0.1.0-beta0"
+            },
+            "time": "2026-05-16T14:52:40+00:00"
         },
         {
             "name": "waffle-commons/routing",
             "version": "0.1.0-beta0",
-            "dist": {
-                "type": "path",
-                "url": "../routing",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/waffle-commons/routing.git",
                 "reference": "9796e7b02f01e741484eaaa311c9c3be40c79df1"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/waffle-commons/routing/zipball/9796e7b02f01e741484eaaa311c9c3be40c79df1",
+                "reference": "9796e7b02f01e741484eaaa311c9c3be40c79df1",
+                "shasum": ""
             },
             "require": {
                 "php": "^8.5",
@@ -1401,51 +1074,7 @@
                     "Waffle\\Commons\\Routing\\": "src/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "WaffleTests\\Commons\\Routing\\": "tests/src/"
-                }
-            },
-            "scripts": {
-                "formatter": [
-                    "vendor/bin/mago fmt"
-                ],
-                "linter": [
-                    "vendor/bin/mago lint"
-                ],
-                "analyzer": [
-                    "vendor/bin/mago analyze"
-                ],
-                "guard": [
-                    "vendor/bin/mago guard"
-                ],
-                "phpunit": [
-                    "vendor/bin/phpunit --log-junit var/data/phpunit-coverage/junit.xml --coverage-html var/data/phpunit-coverage"
-                ],
-                "benchmark": [
-                    "Composer\\Config::disableProcessTimeout",
-                    "vendor/bin/phpbench run --report=default_report --output=waffle_html --retry-threshold=10"
-                ],
-                "mago": [
-                    "@formatter",
-                    "@linter",
-                    "@analyzer",
-                    "@guard"
-                ],
-                "tests": [
-                    "@phpunit"
-                ],
-                "scan": [
-                    "@mago",
-                    "@tests"
-                ],
-                "ci": [
-                    "@mago",
-                    "@tests",
-                    "composer audit",
-                    "vendor/bin/psalm --taint-analysis"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -1456,18 +1085,25 @@
                 }
             ],
             "description": "Routing component for Waffle framework.",
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "support": {
+                "issues": "https://github.com/waffle-commons/routing/issues",
+                "source": "https://github.com/waffle-commons/routing/tree/0.1.0-beta0"
+            },
+            "time": "2026-05-16T15:01:02+00:00"
         },
         {
             "name": "waffle-commons/runtime",
             "version": "0.1.0-beta0",
-            "dist": {
-                "type": "path",
-                "url": "../runtime",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/waffle-commons/runtime.git",
                 "reference": "f2b10e16defcf54c7238a5ad9a124c0c2d3791e4"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/waffle-commons/runtime/zipball/f2b10e16defcf54c7238a5ad9a124c0c2d3791e4",
+                "reference": "f2b10e16defcf54c7238a5ad9a124c0c2d3791e4",
+                "shasum": ""
             },
             "require": {
                 "php": "^8.5",
@@ -1489,51 +1125,7 @@
                     "Waffle\\Commons\\Runtime\\": "src/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "WaffleTests\\Commons\\Runtime\\": "tests/src/"
-                }
-            },
-            "scripts": {
-                "formatter": [
-                    "vendor/bin/mago fmt"
-                ],
-                "linter": [
-                    "vendor/bin/mago lint"
-                ],
-                "analyzer": [
-                    "vendor/bin/mago analyze"
-                ],
-                "guard": [
-                    "vendor/bin/mago guard"
-                ],
-                "phpunit": [
-                    "vendor/bin/phpunit --log-junit var/data/phpunit-coverage/junit.xml --coverage-html var/data/phpunit-coverage"
-                ],
-                "benchmark": [
-                    "Composer\\Config::disableProcessTimeout",
-                    "vendor/bin/phpbench run --report=default_report --output=waffle_html --retry-threshold=10"
-                ],
-                "mago": [
-                    "@formatter",
-                    "@linter",
-                    "@analyzer",
-                    "@guard"
-                ],
-                "tests": [
-                    "@phpunit"
-                ],
-                "scan": [
-                    "@mago",
-                    "@tests"
-                ],
-                "ci": [
-                    "@mago",
-                    "@tests",
-                    "composer audit",
-                    "vendor/bin/psalm --taint-analysis"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -1544,18 +1136,25 @@
                 }
             ],
             "description": "Runtime component for Waffle framework.",
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "support": {
+                "issues": "https://github.com/waffle-commons/runtime/issues",
+                "source": "https://github.com/waffle-commons/runtime/tree/0.1.0-beta0"
+            },
+            "time": "2026-05-16T15:08:04+00:00"
         },
         {
             "name": "waffle-commons/security",
             "version": "0.1.0-beta0",
-            "dist": {
-                "type": "path",
-                "url": "../security",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/waffle-commons/security.git",
                 "reference": "22fe424e8bdf7e82a0d263556affe2899d4ba36c"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/waffle-commons/security/zipball/22fe424e8bdf7e82a0d263556affe2899d4ba36c",
+                "reference": "22fe424e8bdf7e82a0d263556affe2899d4ba36c",
+                "shasum": ""
             },
             "require": {
                 "php": "^8.5",
@@ -1578,51 +1177,7 @@
                     "Waffle\\Commons\\Security\\": "src/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "WaffleTests\\Commons\\Security\\": "tests/src/"
-                }
-            },
-            "scripts": {
-                "formatter": [
-                    "vendor/bin/mago fmt"
-                ],
-                "linter": [
-                    "vendor/bin/mago lint"
-                ],
-                "analyzer": [
-                    "vendor/bin/mago analyze"
-                ],
-                "guard": [
-                    "vendor/bin/mago guard"
-                ],
-                "phpunit": [
-                    "vendor/bin/phpunit --log-junit var/data/phpunit-coverage/junit.xml --coverage-html var/data/phpunit-coverage"
-                ],
-                "benchmark": [
-                    "Composer\\Config::disableProcessTimeout",
-                    "vendor/bin/phpbench run --report=default_report --output=waffle_html --retry-threshold=10"
-                ],
-                "mago": [
-                    "@formatter",
-                    "@linter",
-                    "@analyzer",
-                    "@guard"
-                ],
-                "tests": [
-                    "@phpunit"
-                ],
-                "scan": [
-                    "@mago",
-                    "@tests"
-                ],
-                "ci": [
-                    "@mago",
-                    "@tests",
-                    "composer audit",
-                    "vendor/bin/psalm --taint-analysis"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -1633,18 +1188,25 @@
                 }
             ],
             "description": "Security component for Waffle framework.",
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "support": {
+                "issues": "https://github.com/waffle-commons/security/issues",
+                "source": "https://github.com/waffle-commons/security/tree/0.1.0-beta0"
+            },
+            "time": "2026-05-16T15:05:39+00:00"
         },
         {
             "name": "waffle-commons/utils",
             "version": "0.1.0-beta0",
-            "dist": {
-                "type": "path",
-                "url": "../utils",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/waffle-commons/utils.git",
                 "reference": "41b405d72e1f1b7736e109a873149740a7325f7b"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/waffle-commons/utils/zipball/41b405d72e1f1b7736e109a873149740a7325f7b",
+                "reference": "41b405d72e1f1b7736e109a873149740a7325f7b",
+                "shasum": ""
             },
             "require": {
                 "php": "^8.5",
@@ -1663,51 +1225,7 @@
                     "Waffle\\Commons\\Utils\\": "src/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "WaffleTests\\Commons\\Utils\\": "tests/src/"
-                }
-            },
-            "scripts": {
-                "formatter": [
-                    "vendor/bin/mago fmt"
-                ],
-                "linter": [
-                    "vendor/bin/mago lint"
-                ],
-                "analyzer": [
-                    "vendor/bin/mago analyze"
-                ],
-                "guard": [
-                    "vendor/bin/mago guard"
-                ],
-                "phpunit": [
-                    "vendor/bin/phpunit --log-junit var/data/phpunit-coverage/junit.xml --coverage-html var/data/phpunit-coverage"
-                ],
-                "benchmark": [
-                    "Composer\\Config::disableProcessTimeout",
-                    "vendor/bin/phpbench run --report=default_report --output=waffle_html --retry-threshold=10"
-                ],
-                "mago": [
-                    "@formatter",
-                    "@linter",
-                    "@analyzer",
-                    "@guard"
-                ],
-                "tests": [
-                    "@phpunit"
-                ],
-                "scan": [
-                    "@mago",
-                    "@tests"
-                ],
-                "ci": [
-                    "@mago",
-                    "@tests",
-                    "composer audit",
-                    "vendor/bin/psalm --taint-analysis"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -1718,18 +1236,25 @@
                 }
             ],
             "description": "Utils component for Waffle framework.",
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "support": {
+                "issues": "https://github.com/waffle-commons/utils/issues",
+                "source": "https://github.com/waffle-commons/utils/tree/0.1.0-beta0"
+            },
+            "time": "2026-05-16T14:00:10+00:00"
         },
         {
             "name": "waffle-commons/waffle",
             "version": "0.1.0-beta0",
-            "dist": {
-                "type": "path",
-                "url": "../waffle",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/waffle-commons/waffle.git",
                 "reference": "7ffbc85acde97aa3e48d7b90a4eaea7b96363770"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/waffle-commons/waffle/zipball/7ffbc85acde97aa3e48d7b90a4eaea7b96363770",
+                "reference": "7ffbc85acde97aa3e48d7b90a4eaea7b96363770",
+                "shasum": ""
             },
             "require": {
                 "php": "^8.5",
@@ -1756,51 +1281,7 @@
                     "Waffle\\": "src/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "WaffleTests\\": "tests/src/"
-                }
-            },
-            "scripts": {
-                "formatter": [
-                    "vendor/bin/mago fmt"
-                ],
-                "linter": [
-                    "vendor/bin/mago lint"
-                ],
-                "analyzer": [
-                    "vendor/bin/mago analyze"
-                ],
-                "guard": [
-                    "vendor/bin/mago guard"
-                ],
-                "phpunit": [
-                    "vendor/bin/phpunit --log-junit var/data/phpunit-coverage/junit.xml --coverage-html var/data/phpunit-coverage"
-                ],
-                "benchmark": [
-                    "Composer\\Config::disableProcessTimeout",
-                    "vendor/bin/phpbench run --report=default_report --output=waffle_html --retry-threshold=10"
-                ],
-                "mago": [
-                    "@formatter",
-                    "@linter",
-                    "@analyzer",
-                    "@guard"
-                ],
-                "tests": [
-                    "@phpunit"
-                ],
-                "scan": [
-                    "@mago",
-                    "@tests"
-                ],
-                "ci": [
-                    "@mago",
-                    "@tests",
-                    "composer audit",
-                    "vendor/bin/psalm --taint-analysis"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -1811,10 +1292,11 @@
                 }
             ],
             "description": "A modern, minimalist, and security-focused PHP micro-framework.",
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "support": {
+                "issues": "https://github.com/waffle-commons/waffle/issues",
+                "source": "https://github.com/waffle-commons/waffle/tree/0.1.0-beta0"
+            },
+            "time": "2026-05-16T15:11:15+00:00"
         }
     ],
     "packages-dev": [
@@ -3490,8 +2972,24 @@
         }
     ],
     "aliases": [],
-    "minimum-stability": "alpha",
-    "stability-flags": {},
+    "minimum-stability": "beta",
+    "stability-flags": {
+        "waffle-commons/cache": 10,
+        "waffle-commons/config": 10,
+        "waffle-commons/console": 10,
+        "waffle-commons/container": 10,
+        "waffle-commons/contracts": 10,
+        "waffle-commons/error-handler": 10,
+        "waffle-commons/event-dispatcher": 10,
+        "waffle-commons/http": 10,
+        "waffle-commons/log": 10,
+        "waffle-commons/pipeline": 10,
+        "waffle-commons/routing": 10,
+        "waffle-commons/runtime": 10,
+        "waffle-commons/security": 10,
+        "waffle-commons/utils": 10,
+        "waffle-commons/waffle": 10
+    },
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
