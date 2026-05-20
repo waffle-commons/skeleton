@@ -8,6 +8,7 @@ use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Waffle\Commons\Cache\Factory\CacheFactory;
 use Waffle\Commons\Config\Config;
+use Waffle\Commons\Config\DotEnv;
 use Waffle\Commons\Container\Container;
 use Waffle\Commons\Contracts\Cache\CacheInterface;
 use Waffle\Commons\Contracts\Cache\Constant as CacheConstant;
@@ -60,10 +61,19 @@ final class AppKernelFactory
             $container->set(ResponseFactoryInterface::class, $responseFactory);
         }
 
-        // 2. Instantiate the concrete Config (from waffle-commons/config)
+        // 2. Build the env registry from .env files + process env (Beta-1 hardening:
+        //    DotEnv no longer mutates the global PHP environment, so we merge it
+        //    with the live process env here. Process env wins on conflict so
+        //    Docker/K8s-provided values still override .env defaults).
+        /** @var array<string,string> $processEnv */
+        $processEnv = getenv();
+        $envRegistry = array_merge(new DotEnv($root)->load(), $processEnv);
+
+        // 3. Instantiate the concrete Config (from waffle-commons/config)
         $config = new Config(
             configDir: $rootConfig,
             environment: $env,
+            env: $envRegistry,
         );
         // GlobalsFactory only constructs the PSR-7 ServerRequest; trusted-host enforcement
         // moved to TrustedHostMiddleware (Alpha 6 P0, RFC-003 §3.2).

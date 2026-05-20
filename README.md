@@ -109,7 +109,7 @@ A Waffle application follows a strict but simple structure:
 
 ### Environment Variables (`.env`)
 
-Waffle uses `vlucas/phpdotenv` logic but integrated natively. When you run `create-project`, a `.env` file is automatically created from `.env.example` with a generated `APP_SECRET`.
+Waffle ships a native `DotEnv` parser (no third-party dependency). When you run `create-project`, a `.env` file is automatically created from `.env.example` with a generated `APP_SECRET`.
 
 | Variable      | Description                                                         |
 | ------------- | ------------------------------------------------------------------- |
@@ -117,6 +117,8 @@ Waffle uses `vlucas/phpdotenv` logic but integrated natively. When you run `crea
 | `APP_DEBUG`   | `true` displays detailed stack traces. `false` renders JSON errors. |
 | `APP_SECRET`  | 32-byte Hex string used for cryptographic operations.               |
 | `SERVER_NAME` | The domain name used by Caddy (e.g., `example.com` or `localhost`). |
+
+> **⚠ Precedence: OS env wins over `.env`.** `AppKernelFactory` merges your `.env` with the live process environment (Docker `environment:`, Kubernetes `env:`, shell exports, etc.) via `array_merge((new DotEnv($root))->load(), getenv())`. Because `array_merge` is rightmost-wins on string keys, **the OS value beats `.env`** on collision. If you edit `.env` and the change doesn't take effect, check whether the same variable is exported by your shell or `docker-compose.yml` — that export will silently override `.env`. This matches the Twelve-Factor convention. See [`documentation/how-to/configuration.md`](https://github.com/waffle-commons/documentation/blob/main/how-to/configuration.md) for the merge rules and the type-normalization foot-gun around `APP_DEBUG`/`DEBUG`.
 
 ### Framework Config (`config/app.yaml`)
 
