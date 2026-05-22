@@ -11,6 +11,11 @@ waffle:
     - localhost
   security:
     level: 10
+    csrf:
+      # 32+ byte signing secret for stateless HMAC-signed CSRF tokens (Beta-1 / SEC-01).
+      # Resolved from env WAFFLE_CSRF_SECRET. In prod, a missing/short secret
+      # aborts boot — set it in your deployment manifest before going live.
+      secret: '%env(WAFFLE_CSRF_SECRET)%'
   paths:
     controllers: 'src/Controller'
     services: 'src/Service'
