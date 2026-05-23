@@ -111,12 +111,13 @@ A Waffle application follows a strict but simple structure:
 
 Waffle ships a native `DotEnv` parser (no third-party dependency). When you run `create-project`, a `.env` file is automatically created from `.env.example` with a generated `APP_SECRET`.
 
-| Variable      | Description                                                         |
-| ------------- | ------------------------------------------------------------------- |
-| `APP_ENV`     | `dev` (debug enabled) or `prod` (optimized).                        |
-| `APP_DEBUG`   | `true` displays detailed stack traces. `false` renders JSON errors. |
-| `APP_SECRET`  | 32-byte Hex string used for cryptographic operations.               |
-| `SERVER_NAME` | The domain name used by Caddy (e.g., `example.com` or `localhost`). |
+| Variable             | Description                                                                                                                                                                                            |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `APP_ENV`            | `dev` (debug enabled) or `prod` (optimized).                                                                                                                                                           |
+| `APP_DEBUG`          | `true` displays detailed stack traces. `false` renders JSON errors.                                                                                                                                    |
+| `APP_SECRET`         | 32-byte Hex string used for cryptographic operations.                                                                                                                                                  |
+| `WAFFLE_CSRF_SECRET` | 32+ byte signing secret for stateless HMAC CSRF tokens (Beta-1 / SEC-01). Bound at boot by `AppKernelFactory::resolveCsrfSecret()`. In `prod`, a missing or short value aborts boot; non-prod falls back to a per-process random secret. |
+| `SERVER_NAME`        | The domain name used by Caddy (e.g., `example.com` or `localhost`).                                                                                                                                    |
 
 > **⚠ Precedence: OS env wins over `.env`.** `AppKernelFactory` merges your `.env` with the live process environment (Docker `environment:`, Kubernetes `env:`, shell exports, etc.) via `array_merge((new DotEnv($root))->load(), getenv())`. Because `array_merge` is rightmost-wins on string keys, **the OS value beats `.env`** on collision. If you edit `.env` and the change doesn't take effect, check whether the same variable is exported by your shell or `docker-compose.yml` — that export will silently override `.env`. This matches the Twelve-Factor convention. See [`documentation/how-to/configuration.md`](https://github.com/waffle-commons/documentation/blob/main/how-to/configuration.md) for the merge rules and the type-normalization foot-gun around `APP_DEBUG`/`DEBUG`.
 
@@ -133,10 +134,30 @@ waffle:
   debug: '%env(APP_DEBUG)%'
   security:
     level: 10
+    csrf:
+      # Beta-1 / SEC-01: signing secret for the stateless HMAC CSRF subsystem.
+      # Resolved via getenv(WAFFLE_CSRF_SECRET). Production refuses to boot
+      # without a 32+ byte value.
+      secret: '%env(WAFFLE_CSRF_SECRET)%'
   paths:
     controllers: 'src/Controller'
     services: 'src/Service'
 ```
+
+### Beta-1 security defaults
+
+The skeleton ships the canonical Beta-1 middleware pipeline out of the box:
+
+```
+ErrorHandler → TrustedHost → AnonymousSession → Routing → Csrf → Security → SecureHeaders → Dispatcher
+```
+
+This means every controller action you write is, by default, subject to:
+
+- **Fail-closed ABAC** — an action without `#[Voter]` returns HTTP `403`. Tag explicitly public actions with `#[\Waffle\Commons\Contracts\Security\Attribute\PublicAccess]`.
+- **Stateless HMAC CSRF on mutating routes** — opt actions in with `#[RequiresCsrfToken]`. Tokens are HMAC-bound to the per-browser `WAFFLE_SID` cookie issued by `AnonymousSessionMiddleware`.
+
+See the framework docs at [`waffle-commons/documentation`](https://github.com/waffle-commons/documentation) for the full design rationale.
 
 👩‍💻 Usage Example
 -------------------
