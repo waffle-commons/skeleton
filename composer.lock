@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ebb2e4f7b41fb5dd5408d7db17c9b0a2",
+    "content-hash": "d56facc2c12e62b58629e61a18eae2cf",
     "packages": [
         {
             "name": "predis/predis",
@@ -544,7 +544,7 @@
         },
         {
             "name": "waffle-commons/cache",
-            "version": "0.1.0-beta0",
+            "version": "dev-main",
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/cache.git",
@@ -568,6 +568,7 @@
                 "phpunit/phpunit": "^12.0",
                 "vimeo/psalm": "^6.13"
             },
+            "default-branch": true,
             "type": "library",
             "autoload": {
                 "psr-4": {
@@ -593,7 +594,7 @@
         },
         {
             "name": "waffle-commons/config",
-            "version": "0.1.0-beta0",
+            "version": "dev-main",
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/config.git",
@@ -617,6 +618,7 @@
                 "phpunit/phpunit": "^12.0",
                 "vimeo/psalm": "^6.13"
             },
+            "default-branch": true,
             "type": "library",
             "autoload": {
                 "psr-4": {
@@ -636,13 +638,13 @@
             "description": "Config component for Waffle framework.",
             "support": {
                 "issues": "https://github.com/waffle-commons/config/issues",
-                "source": "https://github.com/waffle-commons/config/tree/0.1.0-beta0"
+                "source": "https://github.com/waffle-commons/config/tree/main"
             },
             "time": "2026-05-16T14:22:42+00:00"
         },
         {
             "name": "waffle-commons/console",
-            "version": "0.1.0-beta0",
+            "version": "dev-main",
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/console.git",
@@ -665,6 +667,7 @@
                 "phpunit/phpunit": "^12.0",
                 "vimeo/psalm": "^6.13"
             },
+            "default-branch": true,
             "type": "library",
             "autoload": {
                 "psr-4": {
@@ -690,7 +693,7 @@
         },
         {
             "name": "waffle-commons/container",
-            "version": "0.1.0-beta0",
+            "version": "dev-main",
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/container.git",
@@ -714,6 +717,7 @@
                 "phpunit/phpunit": "^12.0",
                 "vimeo/psalm": "^6.13"
             },
+            "default-branch": true,
             "type": "library",
             "autoload": {
                 "psr-4": {
@@ -733,13 +737,13 @@
             "description": "Container component for Waffle framework.",
             "support": {
                 "issues": "https://github.com/waffle-commons/container/issues",
-                "source": "https://github.com/waffle-commons/container/tree/0.1.0-beta0"
+                "source": "https://github.com/waffle-commons/container/tree/main"
             },
             "time": "2026-05-16T14:15:15+00:00"
         },
         {
             "name": "waffle-commons/contracts",
-            "version": "0.1.0-beta0",
+            "version": "dev-main",
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/contracts.git",
@@ -769,6 +773,7 @@
                 "phpunit/phpunit": "^12.0",
                 "vimeo/psalm": "^6.13"
             },
+            "default-branch": true,
             "type": "library",
             "autoload": {
                 "psr-4": {
@@ -788,13 +793,13 @@
             "description": "Contracts component for Waffle framework.",
             "support": {
                 "issues": "https://github.com/waffle-commons/contracts/issues",
-                "source": "https://github.com/waffle-commons/contracts/tree/0.1.0-beta0"
+                "source": "https://github.com/waffle-commons/contracts/tree/main"
             },
             "time": "2026-05-16T13:54:29+00:00"
         },
         {
             "name": "waffle-commons/error-handler",
-            "version": "0.1.0-beta0",
+            "version": "dev-main",
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/error-handler.git",
@@ -820,6 +825,7 @@
                 "phpunit/phpunit": "^12.0",
                 "vimeo/psalm": "^6.13"
             },
+            "default-branch": true,
             "type": "library",
             "autoload": {
                 "psr-4": {
@@ -839,13 +845,13 @@
             "description": "ErrorHandler component for Waffle framework.",
             "support": {
                 "issues": "https://github.com/waffle-commons/error-handler/issues",
-                "source": "https://github.com/waffle-commons/error-handler/tree/0.1.0-beta0"
+                "source": "https://github.com/waffle-commons/error-handler/tree/main"
             },
             "time": "2026-05-16T14:59:28+00:00"
         },
         {
             "name": "waffle-commons/event-dispatcher",
-            "version": "0.1.0-beta0",
+            "version": "dev-main",
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/event-dispatcher.git",
@@ -869,6 +875,7 @@
                 "phpunit/phpunit": "^12.0",
                 "vimeo/psalm": "^6.13"
             },
+            "default-branch": true,
             "type": "library",
             "autoload": {
                 "psr-4": {
@@ -894,7 +901,7 @@
         },
         {
             "name": "waffle-commons/http",
-            "version": "0.1.0-beta0",
+            "version": "dev-main",
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/http.git",
@@ -919,6 +926,7 @@
                 "phpunit/phpunit": "^12.0",
                 "vimeo/psalm": "^6.13"
             },
+            "default-branch": true,
             "type": "library",
             "autoload": {
                 "psr-4": {
@@ -938,13 +946,13 @@
             "description": "Http component for Waffle framework.",
             "support": {
                 "issues": "https://github.com/waffle-commons/http/issues",
-                "source": "https://github.com/waffle-commons/http/tree/0.1.0-beta0"
+                "source": "https://github.com/waffle-commons/http/tree/main"
             },
             "time": "2026-05-16T14:11:01+00:00"
         },
         {
             "name": "waffle-commons/log",
-            "version": "0.1.0-beta0",
+            "version": "dev-main",
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/log.git",
@@ -968,6 +976,7 @@
                 "phpunit/phpunit": "^12.0",
                 "vimeo/psalm": "^6.13"
             },
+            "default-branch": true,
             "type": "library",
             "autoload": {
                 "psr-4": {
@@ -993,7 +1002,7 @@
         },
         {
             "name": "waffle-commons/pipeline",
-            "version": "0.1.0-beta0",
+            "version": "dev-main",
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/pipeline.git",
@@ -1018,6 +1027,7 @@
                 "phpunit/phpunit": "^12.0",
                 "vimeo/psalm": "^6.13"
             },
+            "default-branch": true,
             "type": "library",
             "autoload": {
                 "psr-4": {
@@ -1037,13 +1047,13 @@
             "description": "Pipeline component for Waffle framework.",
             "support": {
                 "issues": "https://github.com/waffle-commons/pipeline/issues",
-                "source": "https://github.com/waffle-commons/pipeline/tree/0.1.0-beta0"
+                "source": "https://github.com/waffle-commons/pipeline/tree/main"
             },
             "time": "2026-05-16T14:52:40+00:00"
         },
         {
             "name": "waffle-commons/routing",
-            "version": "0.1.0-beta0",
+            "version": "dev-main",
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/routing.git",
@@ -1068,6 +1078,7 @@
                 "phpunit/phpunit": "^12.0",
                 "vimeo/psalm": "^6.13"
             },
+            "default-branch": true,
             "type": "library",
             "autoload": {
                 "psr-4": {
@@ -1087,13 +1098,13 @@
             "description": "Routing component for Waffle framework.",
             "support": {
                 "issues": "https://github.com/waffle-commons/routing/issues",
-                "source": "https://github.com/waffle-commons/routing/tree/0.1.0-beta0"
+                "source": "https://github.com/waffle-commons/routing/tree/main"
             },
             "time": "2026-05-16T15:01:02+00:00"
         },
         {
             "name": "waffle-commons/runtime",
-            "version": "0.1.0-beta0",
+            "version": "dev-main",
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/runtime.git",
@@ -1119,6 +1130,7 @@
                 "phpunit/phpunit": "^12.0",
                 "vimeo/psalm": "^6.13"
             },
+            "default-branch": true,
             "type": "library",
             "autoload": {
                 "psr-4": {
@@ -1138,13 +1150,13 @@
             "description": "Runtime component for Waffle framework.",
             "support": {
                 "issues": "https://github.com/waffle-commons/runtime/issues",
-                "source": "https://github.com/waffle-commons/runtime/tree/0.1.0-beta0"
+                "source": "https://github.com/waffle-commons/runtime/tree/main"
             },
             "time": "2026-05-16T15:08:04+00:00"
         },
         {
             "name": "waffle-commons/security",
-            "version": "0.1.0-beta0",
+            "version": "dev-main",
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/security.git",
@@ -1171,6 +1183,7 @@
                 "phpunit/phpunit": "^12.0",
                 "vimeo/psalm": "^6.13"
             },
+            "default-branch": true,
             "type": "library",
             "autoload": {
                 "psr-4": {
@@ -1190,13 +1203,13 @@
             "description": "Security component for Waffle framework.",
             "support": {
                 "issues": "https://github.com/waffle-commons/security/issues",
-                "source": "https://github.com/waffle-commons/security/tree/0.1.0-beta0"
+                "source": "https://github.com/waffle-commons/security/tree/main"
             },
             "time": "2026-05-16T15:05:39+00:00"
         },
         {
             "name": "waffle-commons/utils",
-            "version": "0.1.0-beta0",
+            "version": "dev-main",
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/utils.git",
@@ -1219,6 +1232,7 @@
                 "phpunit/phpunit": "^12.0",
                 "vimeo/psalm": "^6.13"
             },
+            "default-branch": true,
             "type": "library",
             "autoload": {
                 "psr-4": {
@@ -1238,13 +1252,13 @@
             "description": "Utils component for Waffle framework.",
             "support": {
                 "issues": "https://github.com/waffle-commons/utils/issues",
-                "source": "https://github.com/waffle-commons/utils/tree/0.1.0-beta0"
+                "source": "https://github.com/waffle-commons/utils/tree/main"
             },
             "time": "2026-05-16T14:00:10+00:00"
         },
         {
             "name": "waffle-commons/waffle",
-            "version": "0.1.0-beta0",
+            "version": "dev-main",
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/waffle.git",
@@ -1275,6 +1289,7 @@
                 "phpunit/phpunit": "^12.0",
                 "vimeo/psalm": "^6.13"
             },
+            "default-branch": true,
             "type": "library",
             "autoload": {
                 "psr-4": {
@@ -1294,7 +1309,7 @@
             "description": "A modern, minimalist, and security-focused PHP micro-framework.",
             "support": {
                 "issues": "https://github.com/waffle-commons/waffle/issues",
-                "source": "https://github.com/waffle-commons/waffle/tree/0.1.0-beta0"
+                "source": "https://github.com/waffle-commons/waffle/tree/main"
             },
             "time": "2026-05-16T15:11:15+00:00"
         }
@@ -2986,21 +3001,21 @@
     "aliases": [],
     "minimum-stability": "beta",
     "stability-flags": {
-        "waffle-commons/cache": 10,
-        "waffle-commons/config": 10,
-        "waffle-commons/console": 10,
-        "waffle-commons/container": 10,
-        "waffle-commons/contracts": 10,
-        "waffle-commons/error-handler": 10,
-        "waffle-commons/event-dispatcher": 10,
-        "waffle-commons/http": 10,
-        "waffle-commons/log": 10,
-        "waffle-commons/pipeline": 10,
-        "waffle-commons/routing": 10,
-        "waffle-commons/runtime": 10,
-        "waffle-commons/security": 10,
-        "waffle-commons/utils": 10,
-        "waffle-commons/waffle": 10
+        "waffle-commons/cache": 20,
+        "waffle-commons/config": 20,
+        "waffle-commons/console": 20,
+        "waffle-commons/container": 20,
+        "waffle-commons/contracts": 20,
+        "waffle-commons/error-handler": 20,
+        "waffle-commons/event-dispatcher": 20,
+        "waffle-commons/http": 20,
+        "waffle-commons/log": 20,
+        "waffle-commons/pipeline": 20,
+        "waffle-commons/routing": 20,
+        "waffle-commons/runtime": 20,
+        "waffle-commons/security": 20,
+        "waffle-commons/utils": 20,
+        "waffle-commons/waffle": 20
     },
     "prefer-stable": true,
     "prefer-lowest": false,
