@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Factory;
 
 use Psr\Http\Message\ResponseFactoryInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 use RuntimeException;
 use Waffle\Commons\Cache\Factory\CacheFactory;
 use Waffle\Commons\Config\Config;
@@ -14,7 +15,6 @@ use Waffle\Commons\Contracts\Cache\CacheInterface;
 use Waffle\Commons\Contracts\Cache\Constant as CacheConstant;
 use Waffle\Commons\Contracts\Constant\Constant;
 use Waffle\Commons\Contracts\Core\KernelInterface;
-use Psr\Http\Server\RequestHandlerInterface;
 use Waffle\Commons\Contracts\EventDispatcher\EventListenerInterface;
 use Waffle\Commons\Contracts\Handler\ArgumentResolverInterface;
 use Waffle\Commons\Contracts\Security\Csrf\Constant as CsrfConstant;
@@ -41,7 +41,7 @@ use Waffle\Commons\Security\Middleware\AnonymousSessionMiddleware;
 use Waffle\Commons\Security\Middleware\CsrfMiddleware;
 use Waffle\Commons\Security\Middleware\SecurityMiddleware;
 use Waffle\Commons\Security\Security;
-use App\Kernel;
+use Workspace\Kernel;
 
 /**
  * The Glue Code: Assembles the application components.
@@ -74,11 +74,7 @@ final class AppKernelFactory
         $envRegistry = array_merge(new DotEnv($root)->load(), $processEnv);
 
         // 3. Instantiate the concrete Config (from waffle-commons/config)
-        $config = new Config(
-            configDir: $rootConfig,
-            environment: $env,
-            env: $envRegistry,
-        );
+        $config = new Config(configDir: $rootConfig, environment: $env, env: $envRegistry);
         // STAB-01 (Beta-1): no static GlobalsFactory — WaffleRuntime constructs
         // its own per-process instance. Trusted-host enforcement lives in
         // TrustedHostMiddleware (RFC-003 §3.2).
@@ -103,21 +99,18 @@ final class AppKernelFactory
         // It must be PREPENDED to catch errors from all subsequent middlewares (Routing, Security, Dispatcher).
         $errorRenderer = new JsonErrorRenderer($responseFactory, $debug);
         $errorLogger = new StreamLogger();
-        $errorHandler = new ErrorHandlerMiddleware(
-            renderer: $errorRenderer,
-            logger: $errorLogger,
-        );
+        $errorHandler = new ErrorHandlerMiddleware(renderer: $errorRenderer, logger: $errorLogger);
 
-        $stack->prepend($errorHandler);
+        $stack->prepend(middleware: $errorHandler);
 
         // 5a. Host header allowlist — fail-fast before routing/security/dispatch.
         // Canonical Beta-1 order: ErrorHandler → TrustedHost → AnonymousSession →
         // Routing → Csrf → Security → SecureHeaders → Dispatcher.
-        $stack->add(new TrustedHostMiddleware($trustedHosts));
+        $stack->add(middleware: new TrustedHostMiddleware($trustedHosts));
 
         // 5a-bis. Per-browser anonymous SID. Must run before Csrf so the SID
         // attribute is populated for the HMAC binding (SEC-01 option C).
-        $stack->add(new AnonymousSessionMiddleware());
+        $stack->add(middleware: new AnonymousSessionMiddleware());
 
         // 5b. Event Dispatcher setup
         $listenerProvider = new ListenerProvider();
@@ -153,26 +146,26 @@ final class AppKernelFactory
         $container->set(CacheInterface::class, $cache);
 
         // 8. Instantiate and Boot Router
-        $controllersPath = $config->getString('waffle.paths.controllers');
+        $controllersPath = $config->getString(key: 'waffle.paths.controllers');
         if (is_string($controllersPath)) {
             // Instantiate Router with the shared PSR-16 cache
             $router = new Router($root . DIRECTORY_SEPARATOR . $controllersPath, $cache);
-            $router->boot($secureContainer);
+            $router->boot(container: $secureContainer);
 
             // Create the Bridge Middleware and add it to the Stack
             // This connects the Router to the Pipeline
             $routingMiddleware = new CoreRoutingMiddleware($router);
+            // This connects the SecureMiddleware to the Pipeline
             $secureLogger = new StreamLogger(channel: LogChannel::SECURITY);
-            $secureMiddleware = new SecurityMiddleware(
-                secureContainer: $secureContainer,
-                logger: $secureLogger,
-            );
-            $stack->add($routingMiddleware);
-            // CsrfMiddleware must come after Routing (it reads `_classname`/`_method`
+            $secureMiddleware = new SecurityMiddleware(secureContainer: $secureContainer, logger: $secureLogger);
+            $stack->add(middleware: $routingMiddleware);
+            // CsrfMiddleware must come after Routing (reads `_classname`/`_method`
             // to find #[RequiresCsrfToken]) and before Security.
-            $stack->add(new CsrfMiddleware($csrfTokenManager));
-            $stack->add($secureMiddleware);
-            $stack->add(new SecureHeadersMiddleware());
+            $stack->add(middleware: new CsrfMiddleware($csrfTokenManager));
+            $stack->add(middleware: $secureMiddleware);
+
+            // Secure headers middleware
+            $stack->add(middleware: new SecureHeadersMiddleware());
         }
 
         // 9. Inject Dependencies
@@ -219,8 +212,8 @@ final class AppKernelFactory
 
         if ($env === Constant::ENV_PROD) {
             throw new RuntimeException(sprintf(
-                'CSRF secret missing or shorter than %d bytes in production. ' .
-                    'Set "waffle.security.csrf.secret" or env %s.',
+                'CSRF secret missing or shorter than %d bytes in production. '
+                . 'Set "waffle.security.csrf.secret" or env %s.',
                 CsrfConstant::MIN_SECRET_BYTES,
                 CsrfConstant::SECRET_ENV_KEY,
             ));
@@ -234,8 +227,7 @@ final class AppKernelFactory
     /**
      * Builds the PSR-16 cache adapter chosen by `waffle.cache.adapter`.
      *
-     * Falls back to the in-memory ArrayCache when no adapter is configured — never
-     * crashes the framework boot just because the cache section is missing.
+     * Falls back to the in-memory ArrayCache when no adapter is configured.
      */
     public static function buildCache(string $root, Config $config): CacheInterface
     {
@@ -253,6 +245,7 @@ final class AppKernelFactory
 
     /**
      * Auto-discovers and registers event listeners from a directory.
+     * Scans for classes implementing EventListenerInterface with #[AsEventListener] attributes.
      */
     private static function discoverAndRegisterListeners(ListenerProvider $provider, string $directory): void
     {
@@ -260,9 +253,10 @@ final class AppKernelFactory
             return;
         }
 
-        $iterator = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($directory, \RecursiveDirectoryIterator::SKIP_DOTS),
-        );
+        $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(
+            $directory,
+            \RecursiveDirectoryIterator::SKIP_DOTS,
+        ));
 
         foreach ($iterator as $file) {
             if (!$file->isFile() || $file->getExtension() !== 'php') {
@@ -270,10 +264,16 @@ final class AppKernelFactory
             }
 
             $content = file_get_contents($file->getPathname());
-            if ($content === false || !str_contains($content, 'AsEventListener')) {
+            if ($content === false) {
                 continue;
             }
 
+            // Quick check: does this file contain AsEventListener attribute?
+            if (!str_contains($content, 'AsEventListener')) {
+                continue;
+            }
+
+            // Extract FQCN using token_get_all (same approach as ReflectionTrait)
             $fqcn = self::extractClassName($file->getPathname());
             if ($fqcn === '' || !class_exists($fqcn)) {
                 continue;
@@ -288,7 +288,7 @@ final class AppKernelFactory
     }
 
     /**
-     * Extracts the fully qualified class name from a PHP file.
+     * Extracts the fully qualified class name from a PHP file using token_get_all.
      */
     private static function extractClassName(string $path): string
     {
@@ -329,6 +329,10 @@ final class AppKernelFactory
                     }
                 }
             }
+        }
+
+        if ($class === '') {
+            return '';
         }
 
         return $namespace ? $namespace . '\\' . $class : $class;

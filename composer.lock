@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d56facc2c12e62b58629e61a18eae2cf",
+    "content-hash": "dddbcf9cadc17da3b216f55efb0ed0dc",
     "packages": [
         {
             "name": "predis/predis",
@@ -219,6 +219,58 @@
                 "source": "https://github.com/php-fig/event-dispatcher/tree/1.0.0"
             },
             "time": "2019-01-08T18:20:26+00:00"
+        },
+        {
+            "name": "psr/http-client",
+            "version": "1.0.3",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/php-fig/http-client.git",
+                "reference": "bb5906edc1c324c9a05aa0873d40117941e5fa90"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/php-fig/http-client/zipball/bb5906edc1c324c9a05aa0873d40117941e5fa90",
+                "reference": "bb5906edc1c324c9a05aa0873d40117941e5fa90",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^7.0 || ^8.0",
+                "psr/http-message": "^1.0 || ^2.0"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.0.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Psr\\Http\\Client\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "PHP-FIG",
+                    "homepage": "https://www.php-fig.org/"
+                }
+            ],
+            "description": "Common interface for HTTP clients",
+            "homepage": "https://github.com/php-fig/http-client",
+            "keywords": [
+                "http",
+                "http-client",
+                "psr",
+                "psr-18"
+            ],
+            "support": {
+                "source": "https://github.com/php-fig/http-client"
+            },
+            "time": "2023-09-23T14:17:50+00:00"
         },
         {
             "name": "psr/http-factory",
@@ -548,12 +600,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/cache.git",
-                "reference": "6016dc89348a297664fdc3fd1ae649dd6c9f1be8"
+                "reference": "fbd03fad4aad39e258629bbc31fe9497fd3ce0bd"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/cache/zipball/6016dc89348a297664fdc3fd1ae649dd6c9f1be8",
-                "reference": "6016dc89348a297664fdc3fd1ae649dd6c9f1be8",
+                "url": "https://api.github.com/repos/waffle-commons/cache/zipball/fbd03fad4aad39e258629bbc31fe9497fd3ce0bd",
+                "reference": "fbd03fad4aad39e258629bbc31fe9497fd3ce0bd",
                 "shasum": ""
             },
             "require": {
@@ -588,9 +640,9 @@
             "description": "Cache component for Waffle framework.",
             "support": {
                 "issues": "https://github.com/waffle-commons/cache/issues",
-                "source": "https://github.com/waffle-commons/cache/tree/0.1.0-beta0"
+                "source": "https://github.com/waffle-commons/cache/tree/main"
             },
-            "time": "2026-05-16T14:35:28+00:00"
+            "time": "2026-05-25T01:55:59+00:00"
         },
         {
             "name": "waffle-commons/config",
@@ -598,12 +650,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/config.git",
-                "reference": "bf8f510c76a8d4a4e57c56e7d68d9204a22b1499"
+                "reference": "c235991a625e54758f695b85aeaf446e19523ec0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/config/zipball/bf8f510c76a8d4a4e57c56e7d68d9204a22b1499",
-                "reference": "bf8f510c76a8d4a4e57c56e7d68d9204a22b1499",
+                "url": "https://api.github.com/repos/waffle-commons/config/zipball/c235991a625e54758f695b85aeaf446e19523ec0",
+                "reference": "c235991a625e54758f695b85aeaf446e19523ec0",
                 "shasum": ""
             },
             "require": {
@@ -640,7 +692,7 @@
                 "issues": "https://github.com/waffle-commons/config/issues",
                 "source": "https://github.com/waffle-commons/config/tree/main"
             },
-            "time": "2026-05-16T14:22:42+00:00"
+            "time": "2026-05-25T02:01:52+00:00"
         },
         {
             "name": "waffle-commons/console",
@@ -648,12 +700,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/console.git",
-                "reference": "aaac0a456ef765879eaddd690bcc453f2cd22a2f"
+                "reference": "1fb7281df6731592462b963f3328beb2c0170d44"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/console/zipball/aaac0a456ef765879eaddd690bcc453f2cd22a2f",
-                "reference": "aaac0a456ef765879eaddd690bcc453f2cd22a2f",
+                "url": "https://api.github.com/repos/waffle-commons/console/zipball/1fb7281df6731592462b963f3328beb2c0170d44",
+                "reference": "1fb7281df6731592462b963f3328beb2c0170d44",
                 "shasum": ""
             },
             "require": {
@@ -687,9 +739,9 @@
             "description": "Console component for Waffle framework.",
             "support": {
                 "issues": "https://github.com/waffle-commons/console/issues",
-                "source": "https://github.com/waffle-commons/console/tree/0.1.0-beta0"
+                "source": "https://github.com/waffle-commons/console/tree/main"
             },
-            "time": "2026-05-16T14:39:37+00:00"
+            "time": "2026-05-25T02:05:20+00:00"
         },
         {
             "name": "waffle-commons/container",
@@ -697,12 +749,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/container.git",
-                "reference": "8ec8a6b2e7849cff597ea88a28cb433514eef1e1"
+                "reference": "b38ba644c9c31c5b1483ae6448e731597712706e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/container/zipball/8ec8a6b2e7849cff597ea88a28cb433514eef1e1",
-                "reference": "8ec8a6b2e7849cff597ea88a28cb433514eef1e1",
+                "url": "https://api.github.com/repos/waffle-commons/container/zipball/b38ba644c9c31c5b1483ae6448e731597712706e",
+                "reference": "b38ba644c9c31c5b1483ae6448e731597712706e",
                 "shasum": ""
             },
             "require": {
@@ -739,7 +791,7 @@
                 "issues": "https://github.com/waffle-commons/container/issues",
                 "source": "https://github.com/waffle-commons/container/tree/main"
             },
-            "time": "2026-05-16T14:15:15+00:00"
+            "time": "2026-05-25T02:08:40+00:00"
         },
         {
             "name": "waffle-commons/contracts",
@@ -747,12 +799,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/contracts.git",
-                "reference": "1d3c2943a1cb2b14c98e768b12d2dbd183728175"
+                "reference": "b7b36cd1159cfbc2628f1858d53e2fa92f3acf6c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/contracts/zipball/1d3c2943a1cb2b14c98e768b12d2dbd183728175",
-                "reference": "1d3c2943a1cb2b14c98e768b12d2dbd183728175",
+                "url": "https://api.github.com/repos/waffle-commons/contracts/zipball/b7b36cd1159cfbc2628f1858d53e2fa92f3acf6c",
+                "reference": "b7b36cd1159cfbc2628f1858d53e2fa92f3acf6c",
                 "shasum": ""
             },
             "require": {
@@ -760,6 +812,7 @@
                 "psr/cache": "^3.0",
                 "psr/container": "^2.0",
                 "psr/event-dispatcher": "^1.0",
+                "psr/http-client": "^1.0",
                 "psr/http-message": "^1.1 || ^2.0",
                 "psr/http-server-handler": "^1.0",
                 "psr/http-server-middleware": "^1.0",
@@ -795,7 +848,7 @@
                 "issues": "https://github.com/waffle-commons/contracts/issues",
                 "source": "https://github.com/waffle-commons/contracts/tree/main"
             },
-            "time": "2026-05-16T13:54:29+00:00"
+            "time": "2026-05-25T01:02:31+00:00"
         },
         {
             "name": "waffle-commons/error-handler",
@@ -803,12 +856,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/error-handler.git",
-                "reference": "333ecf5554cccabee01421980aca6cdba7ca2c5e"
+                "reference": "87fdb4f552d4e182b95674afe8b193023514e445"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/error-handler/zipball/333ecf5554cccabee01421980aca6cdba7ca2c5e",
-                "reference": "333ecf5554cccabee01421980aca6cdba7ca2c5e",
+                "url": "https://api.github.com/repos/waffle-commons/error-handler/zipball/87fdb4f552d4e182b95674afe8b193023514e445",
+                "reference": "87fdb4f552d4e182b95674afe8b193023514e445",
                 "shasum": ""
             },
             "require": {
@@ -847,7 +900,7 @@
                 "issues": "https://github.com/waffle-commons/error-handler/issues",
                 "source": "https://github.com/waffle-commons/error-handler/tree/main"
             },
-            "time": "2026-05-16T14:59:28+00:00"
+            "time": "2026-05-25T02:11:56+00:00"
         },
         {
             "name": "waffle-commons/event-dispatcher",
@@ -855,12 +908,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/event-dispatcher.git",
-                "reference": "287fdd1aa8b0b24408b4c2c7fcfbfb4844d881b5"
+                "reference": "73d1a09f758106d12cca2c52c0c8fc7109acc7ed"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/event-dispatcher/zipball/287fdd1aa8b0b24408b4c2c7fcfbfb4844d881b5",
-                "reference": "287fdd1aa8b0b24408b4c2c7fcfbfb4844d881b5",
+                "url": "https://api.github.com/repos/waffle-commons/event-dispatcher/zipball/73d1a09f758106d12cca2c52c0c8fc7109acc7ed",
+                "reference": "73d1a09f758106d12cca2c52c0c8fc7109acc7ed",
                 "shasum": ""
             },
             "require": {
@@ -895,9 +948,9 @@
             "description": "Event Dispatcher component for Waffle framework.",
             "support": {
                 "issues": "https://github.com/waffle-commons/event-dispatcher/issues",
-                "source": "https://github.com/waffle-commons/event-dispatcher/tree/0.1.0-beta0"
+                "source": "https://github.com/waffle-commons/event-dispatcher/tree/main"
             },
-            "time": "2026-05-16T14:51:27+00:00"
+            "time": "2026-05-25T02:15:59+00:00"
         },
         {
             "name": "waffle-commons/http",
@@ -905,12 +958,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/http.git",
-                "reference": "d6305ce63d0171e3d145bbbdf495d389b53b837f"
+                "reference": "16427be3a67db34aa970d18d8f6a42c13d1be3ff"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/http/zipball/d6305ce63d0171e3d145bbbdf495d389b53b837f",
-                "reference": "d6305ce63d0171e3d145bbbdf495d389b53b837f",
+                "url": "https://api.github.com/repos/waffle-commons/http/zipball/16427be3a67db34aa970d18d8f6a42c13d1be3ff",
+                "reference": "16427be3a67db34aa970d18d8f6a42c13d1be3ff",
                 "shasum": ""
             },
             "require": {
@@ -948,7 +1001,61 @@
                 "issues": "https://github.com/waffle-commons/http/issues",
                 "source": "https://github.com/waffle-commons/http/tree/main"
             },
-            "time": "2026-05-16T14:11:01+00:00"
+            "time": "2026-05-25T02:17:51+00:00"
+        },
+        {
+            "name": "waffle-commons/http-client",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/waffle-commons/http-client.git",
+                "reference": "556da968a788a5087e88a810107236f78d1babe7"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/waffle-commons/http-client/zipball/556da968a788a5087e88a810107236f78d1babe7",
+                "reference": "556da968a788a5087e88a810107236f78d1babe7",
+                "shasum": ""
+            },
+            "require": {
+                "ext-curl": "*",
+                "php": "^8.5",
+                "psr/http-client": "^1.0",
+                "psr/http-factory": "^1.0",
+                "psr/http-message": "^1.1 || ^2.0",
+                "waffle-commons/contracts": "self.version"
+            },
+            "require-dev": {
+                "carthage-software/mago": "^1.0.0-beta.31",
+                "cyclonedx/cyclonedx-php-composer": "^6.2",
+                "nyholm/psr7": "^1.8",
+                "php-mock/php-mock-phpunit": "^2.13",
+                "phpunit/phpunit": "^12.0",
+                "vimeo/psalm": "^6.13"
+            },
+            "default-branch": true,
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Waffle\\Commons\\HttpClient\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Leslie Petrimaux",
+                    "email": "contact@waffle-commons.cloud"
+                }
+            ],
+            "description": "HTTP Client component for Waffle framework.",
+            "support": {
+                "issues": "https://github.com/waffle-commons/http-client/issues",
+                "source": "https://github.com/waffle-commons/http-client/tree/main"
+            },
+            "time": "2026-05-25T01:16:43+00:00"
         },
         {
             "name": "waffle-commons/log",
@@ -956,12 +1063,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/log.git",
-                "reference": "a1da1f9658018abbb0331db3978ad483bddcfa7e"
+                "reference": "7254ad40b3544ff6f13a766dff3f037cc67c6bc5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/log/zipball/a1da1f9658018abbb0331db3978ad483bddcfa7e",
-                "reference": "a1da1f9658018abbb0331db3978ad483bddcfa7e",
+                "url": "https://api.github.com/repos/waffle-commons/log/zipball/7254ad40b3544ff6f13a766dff3f037cc67c6bc5",
+                "reference": "7254ad40b3544ff6f13a766dff3f037cc67c6bc5",
                 "shasum": ""
             },
             "require": {
@@ -996,9 +1103,9 @@
             "description": "Log component for Waffle framework.",
             "support": {
                 "issues": "https://github.com/waffle-commons/log/issues",
-                "source": "https://github.com/waffle-commons/log/tree/0.1.0-beta0"
+                "source": "https://github.com/waffle-commons/log/tree/main"
             },
-            "time": "2026-05-16T14:21:17+00:00"
+            "time": "2026-05-25T02:20:58+00:00"
         },
         {
             "name": "waffle-commons/pipeline",
@@ -1006,12 +1113,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/pipeline.git",
-                "reference": "243c5977b1829b5594fe7a116a126e5567127dd6"
+                "reference": "1ba0865bcbba0e66e2e485195c5e5453050e980d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/pipeline/zipball/243c5977b1829b5594fe7a116a126e5567127dd6",
-                "reference": "243c5977b1829b5594fe7a116a126e5567127dd6",
+                "url": "https://api.github.com/repos/waffle-commons/pipeline/zipball/1ba0865bcbba0e66e2e485195c5e5453050e980d",
+                "reference": "1ba0865bcbba0e66e2e485195c5e5453050e980d",
                 "shasum": ""
             },
             "require": {
@@ -1049,7 +1156,7 @@
                 "issues": "https://github.com/waffle-commons/pipeline/issues",
                 "source": "https://github.com/waffle-commons/pipeline/tree/main"
             },
-            "time": "2026-05-16T14:52:40+00:00"
+            "time": "2026-05-25T02:25:40+00:00"
         },
         {
             "name": "waffle-commons/routing",
@@ -1057,12 +1164,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/routing.git",
-                "reference": "9796e7b02f01e741484eaaa311c9c3be40c79df1"
+                "reference": "cfb3d7add389597e657dc3b9f0e4f67ce63565af"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/routing/zipball/9796e7b02f01e741484eaaa311c9c3be40c79df1",
-                "reference": "9796e7b02f01e741484eaaa311c9c3be40c79df1",
+                "url": "https://api.github.com/repos/waffle-commons/routing/zipball/cfb3d7add389597e657dc3b9f0e4f67ce63565af",
+                "reference": "cfb3d7add389597e657dc3b9f0e4f67ce63565af",
                 "shasum": ""
             },
             "require": {
@@ -1100,7 +1207,7 @@
                 "issues": "https://github.com/waffle-commons/routing/issues",
                 "source": "https://github.com/waffle-commons/routing/tree/main"
             },
-            "time": "2026-05-16T15:01:02+00:00"
+            "time": "2026-05-25T02:28:54+00:00"
         },
         {
             "name": "waffle-commons/runtime",
@@ -1108,12 +1215,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/runtime.git",
-                "reference": "f2b10e16defcf54c7238a5ad9a124c0c2d3791e4"
+                "reference": "d0d2bff3bd7021e5a207d1a9d0199823b3761ead"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/runtime/zipball/f2b10e16defcf54c7238a5ad9a124c0c2d3791e4",
-                "reference": "f2b10e16defcf54c7238a5ad9a124c0c2d3791e4",
+                "url": "https://api.github.com/repos/waffle-commons/runtime/zipball/d0d2bff3bd7021e5a207d1a9d0199823b3761ead",
+                "reference": "d0d2bff3bd7021e5a207d1a9d0199823b3761ead",
                 "shasum": ""
             },
             "require": {
@@ -1152,7 +1259,7 @@
                 "issues": "https://github.com/waffle-commons/runtime/issues",
                 "source": "https://github.com/waffle-commons/runtime/tree/main"
             },
-            "time": "2026-05-16T15:08:04+00:00"
+            "time": "2026-05-25T02:30:25+00:00"
         },
         {
             "name": "waffle-commons/security",
@@ -1160,12 +1267,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/security.git",
-                "reference": "22fe424e8bdf7e82a0d263556affe2899d4ba36c"
+                "reference": "f5678880fbb8d093087a17b2932fc104fe397afd"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/security/zipball/22fe424e8bdf7e82a0d263556affe2899d4ba36c",
-                "reference": "22fe424e8bdf7e82a0d263556affe2899d4ba36c",
+                "url": "https://api.github.com/repos/waffle-commons/security/zipball/f5678880fbb8d093087a17b2932fc104fe397afd",
+                "reference": "f5678880fbb8d093087a17b2932fc104fe397afd",
                 "shasum": ""
             },
             "require": {
@@ -1205,7 +1312,7 @@
                 "issues": "https://github.com/waffle-commons/security/issues",
                 "source": "https://github.com/waffle-commons/security/tree/main"
             },
-            "time": "2026-05-16T15:05:39+00:00"
+            "time": "2026-05-25T02:37:27+00:00"
         },
         {
             "name": "waffle-commons/utils",
@@ -1213,12 +1320,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/utils.git",
-                "reference": "41b405d72e1f1b7736e109a873149740a7325f7b"
+                "reference": "707da78b4098fca782d54c624039fd8f477a096e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/utils/zipball/41b405d72e1f1b7736e109a873149740a7325f7b",
-                "reference": "41b405d72e1f1b7736e109a873149740a7325f7b",
+                "url": "https://api.github.com/repos/waffle-commons/utils/zipball/707da78b4098fca782d54c624039fd8f477a096e",
+                "reference": "707da78b4098fca782d54c624039fd8f477a096e",
                 "shasum": ""
             },
             "require": {
@@ -1254,7 +1361,7 @@
                 "issues": "https://github.com/waffle-commons/utils/issues",
                 "source": "https://github.com/waffle-commons/utils/tree/main"
             },
-            "time": "2026-05-16T14:00:10+00:00"
+            "time": "2026-05-25T01:03:09+00:00"
         },
         {
             "name": "waffle-commons/waffle",
@@ -1262,12 +1369,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/waffle.git",
-                "reference": "7ffbc85acde97aa3e48d7b90a4eaea7b96363770"
+                "reference": "6cde0e7e2d82a103f383c176369fb4cb35f84459"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/waffle/zipball/7ffbc85acde97aa3e48d7b90a4eaea7b96363770",
-                "reference": "7ffbc85acde97aa3e48d7b90a4eaea7b96363770",
+                "url": "https://api.github.com/repos/waffle-commons/waffle/zipball/6cde0e7e2d82a103f383c176369fb4cb35f84459",
+                "reference": "6cde0e7e2d82a103f383c176369fb4cb35f84459",
                 "shasum": ""
             },
             "require": {
@@ -1311,7 +1418,7 @@
                 "issues": "https://github.com/waffle-commons/waffle/issues",
                 "source": "https://github.com/waffle-commons/waffle/tree/main"
             },
-            "time": "2026-05-16T15:11:15+00:00"
+            "time": "2026-05-25T02:45:37+00:00"
         }
     ],
     "packages-dev": [
@@ -3009,6 +3116,7 @@
         "waffle-commons/error-handler": 20,
         "waffle-commons/event-dispatcher": 20,
         "waffle-commons/http": 20,
+        "waffle-commons/http-client": 20,
         "waffle-commons/log": 20,
         "waffle-commons/pipeline": 20,
         "waffle-commons/routing": 20,

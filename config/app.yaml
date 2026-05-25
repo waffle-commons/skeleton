@@ -26,7 +26,7 @@ waffle:
     stream: 'php://stderr'
   # PSR-16 cache (RFC-013). Drives the Router cache, and the upcoming CSRF store.
   cache:
-    adapter: 'file'                    # array | file | redis
+    adapter: 'redis'                    # array | file | redis
     directory: 'var/cache/psr16'       # resolved against APP_ROOT (file adapter)
     redis_dsn: '%env(REDIS_DSN)%'      # redis adapter only
     default_ttl: 3600                  # seconds, optional
