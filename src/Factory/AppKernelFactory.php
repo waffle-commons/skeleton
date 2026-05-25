@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Factory;
 
+use App\Kernel;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use RuntimeException;
@@ -41,7 +42,6 @@ use Waffle\Commons\Security\Middleware\AnonymousSessionMiddleware;
 use Waffle\Commons\Security\Middleware\CsrfMiddleware;
 use Waffle\Commons\Security\Middleware\SecurityMiddleware;
 use Waffle\Commons\Security\Security;
-use Workspace\Kernel;
 
 /**
  * The Glue Code: Assembles the application components.
