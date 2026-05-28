@@ -166,7 +166,7 @@ final class AppKernelFactory
 
             // Create the Bridge Middleware and add it to the Stack
             // This connects the Router to the Pipeline
-            $routingMiddleware = new CoreRoutingMiddleware($router);
+            $routingMiddleware = new CoreRoutingMiddleware($router, $responseFactory);
             // This connects the SecureMiddleware to the Pipeline
             $secureLogger = new StreamLogger(channel: LogChannel::SECURITY);
             $secureMiddleware = new SecurityMiddleware(secureContainer: $secureContainer, logger: $secureLogger);
