@@ -9,12 +9,12 @@ final class DemoService
     /**
      * @return string[]
      */
-    public function sayHello(null|string $to = null): array
+    public function sayHello(?string $to = null): array
     {
         $name = $to ?? 'from Waffle';
 
         return [
-            "message" => "Hello {$name}!",
+            'message' => "Hello {$name}!",
         ];
     }
 }

@@ -6,9 +6,10 @@ namespace AppTests\Dto;
 
 use App\Dto\HelloInput;
 use AppTests\AbstractTestCase;
-use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
+use Waffle\Commons\Contracts\Exception\Validation\ValidationExceptionInterface;
+use Waffle\Exception\ValidationException;
 
 final class HelloInputTest extends AbstractTestCase
 {
@@ -32,9 +33,21 @@ final class HelloInputTest extends AbstractTestCase
     #[DataProvider('invalidNames')]
     public function it_rejects_invalid_names(string $invalid): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(ValidationExceptionInterface::class);
 
         new HelloInput(name: $invalid);
+    }
+
+    #[Test]
+    public function it_throws_a_validation_exception_carrying_the_field_name(): void
+    {
+        try {
+            new HelloInput(name: '');
+            self::fail('Expected ValidationException for empty name.');
+        } catch (ValidationException $exception) {
+            self::assertSame('name', $exception->getField());
+            self::assertSame(422, $exception->getCode());
+        }
     }
 
     /**

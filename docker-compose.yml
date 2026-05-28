@@ -1,29 +1,29 @@
 services:
   php:
-    # Build from the 'dev' stage of the Dockerfile
-    # This stage includes Composer, Xdebug, and non-root user setup
+    # Construction à partir du stage 'dev' du Dockerfile.
+    # Ce stage inclut Composer, Xdebug et un utilisateur non-root.
     build:
       context: .
       dockerfile: ./docker/Dockerfile
       target: dev
     image: waffle-app:dev
-    # In Development, we mount the local directory to /app
-    # This allows for "Hot Reload" and coding without rebuilding
+    # En développement, le dossier local est monté sur /app.
+    # Cela permet le « hot reload » et de coder sans rebuild.
     volumes:
       - ./:/app
-      # We ignore .git to avoid permission issues and unnecessary IO overhead
+      # On ignore .git pour éviter les problèmes de permissions et la charge IO inutile.
       - /app/.git
-    # Environment variables for Development
+    # Variables d'environnement de développement.
     environment:
       SERVER_NAME: localhost
       APP_ENV: dev
       APP_DEBUG: true
-      # Enable Xdebug step debugging and coverage
+      # Activation du débogage pas-à-pas et de la couverture Xdebug.
       XDEBUG_MODE: debug,coverage
-    # Expose HTTP (80), HTTPS (443), and HTTP/3 (443 UDP)
+    # Exposition HTTP (80), HTTPS (443) et HTTP/3 (443 UDP).
     ports:
       - "80:80"
       - "443:443"
       - "443:443/udp"
-    # Keep the container running interactively
+    # Conservation interactive du conteneur.
     tty: true

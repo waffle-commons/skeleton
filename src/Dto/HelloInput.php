@@ -4,25 +4,27 @@ declare(strict_types=1);
 
 namespace App\Dto;
 
-use InvalidArgumentException;
 use Waffle\Commons\Contracts\Attribute\Dto;
+use Waffle\Exception\ValidationException;
 
 /**
- * Input DTO for the greeting endpoint (POST /greet).
+ * DTO d'entrée pour l'endpoint de salutation (POST /greet).
  *
- * Hydrated by the framework's ControllerArgumentResolver from the JSON request
- * body (RFC-011): the resolver decodes the parsed body, matches keys to this
- * constructor's parameters by name, and instantiates the object.
+ * Hydraté par le ControllerArgumentResolver du framework à partir du corps JSON
+ * (RFC-011) : le resolver décode le body parsé, associe les clés aux paramètres
+ * du constructeur par nom, puis instancie l'objet.
  *
- * Validation is performed natively by a PHP 8.5 **Property Hook** — there is
- * intentionally NO external validation package, because validation is domain
- * logic that belongs to the value itself. A rejected value throws, and the
- * resolver maps that throw to an RFC 7807 `422 Unprocessable Entity`.
+ * La validation est portée nativement par un PHP 8.5 **Property Hook** — il n'y
+ * a *aucune* dépendance à une bibliothèque de validation tierce, parce que la
+ * validation est une logique de domaine qui appartient à la valeur elle-même.
+ * Une valeur rejetée lève une exception que le JsonErrorRenderer transforme en
+ * réponse RFC 7807 « 422 Unprocessable Entity ».
  *
- * The class is not `readonly` on purpose: PHP forbids a `set` hook on a
- * `readonly` property, so external immutability is expressed with **asymmetric
- * visibility** (`public private(set)`) instead — callers can read `$name` but
- * never reassign it, while the validating `set` hook still runs on hydration.
+ * La classe n'est volontairement pas `readonly` : PHP interdit un hook `set` sur
+ * une propriété `readonly`. L'immuabilité externe est donc exprimée par la
+ * **visibilité asymétrique** (`public private(set)`) — les appelants peuvent
+ * lire `$name` mais jamais le réassigner, tandis que le hook `set` valide la
+ * valeur lors de l'hydratation.
  */
 #[Dto]
 final class HelloInput
@@ -33,8 +35,9 @@ final class HelloInput
                 $clean = trim($value);
 
                 if ($clean === '' || preg_match('/^\p{L}+$/u', $clean) !== 1) {
-                    throw new InvalidArgumentException(
-                        'Field "name" must be a non-empty, alphabetic string.',
+                    throw new ValidationException(
+                        message: 'Le champ « name » doit être une chaîne non vide composée uniquement de lettres.',
+                        field: 'name',
                     );
                 }
 

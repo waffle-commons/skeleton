@@ -1,27 +1,27 @@
 services:
   php:
-    # Build from the 'prod' stage of the Dockerfile
-    # This stage is minimal, secure, and contains the optimized code
+    # Construction à partir du stage 'prod' du Dockerfile.
+    # Ce stage est minimal, sécurisé et contient le code optimisé.
     build:
       context: .
       dockerfile: ./docker/Dockerfile
       target: prod
     image: waffle-app:prod
-    # CRITICAL: No volumes in production!
-    # The code is immutable and baked into the image.
+    # CRITIQUE : pas de volumes en production !
+    # Le code est immuable et figé dans l'image.
     volumes: []
-    # Environment variables for Production
+    # Variables d'environnement de production.
     environment:
-      # Use the real domain name (passed via env var or default to localhost)
+      # Utiliser le vrai nom de domaine (transmis via variable d'environnement, sinon localhost).
       SERVER_NAME: ${SERVER_NAME:-localhost}
       APP_ENV: prod
       APP_DEBUG: false
-      # Secrets should be injected via CI/CD or Docker Secrets in a real environment
+      # En production réelle, les secrets doivent être injectés via la CI/CD ou Docker Secrets.
       APP_SECRET: ${APP_SECRET:-ChangeMeInProduction}
-    # Expose ports
+    # Exposition des ports.
     ports:
       - "80:80"
       - "443:443"
       - "443:443/udp"
-    # Production restart policy
+    # Politique de redémarrage en production.
     restart: always

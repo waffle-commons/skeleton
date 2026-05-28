@@ -8,5 +8,5 @@ use PHPUnit\Framework\TestCase as BaseTestCase;
 
 abstract class AbstractTestCase extends BaseTestCase
 {
-    // Customize your base test cases
+    // Personnalisez vos cas de test de base ici.
 }

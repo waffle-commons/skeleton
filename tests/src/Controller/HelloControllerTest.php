@@ -29,10 +29,7 @@ final class HelloControllerTest extends AbstractTestCase
 
         self::assertSame(200, $response->getStatusCode());
         self::assertSame('application/json', $response->getHeaderLine('Content-Type'));
-        self::assertJsonStringEqualsJsonString(
-            '{"message":"Hello from Waffle!"}',
-            (string) $response->getBody(),
-        );
+        self::assertJsonStringEqualsJsonString('{"message":"Hello from Waffle!"}', (string) $response->getBody());
     }
 
     #[Test]
@@ -41,10 +38,7 @@ final class HelloControllerTest extends AbstractTestCase
         $response = $this->controller()->hello(new DemoService(), 'Ada');
 
         self::assertSame(200, $response->getStatusCode());
-        self::assertJsonStringEqualsJsonString(
-            '{"message":"Hello Ada!"}',
-            (string) $response->getBody(),
-        );
+        self::assertJsonStringEqualsJsonString('{"message":"Hello Ada!"}', (string) $response->getBody());
     }
 
     #[Test]
@@ -53,10 +47,7 @@ final class HelloControllerTest extends AbstractTestCase
         $response = $this->controller()->greet(new DemoService(), new HelloInput(name: 'Ada'));
 
         self::assertSame(200, $response->getStatusCode());
-        self::assertJsonStringEqualsJsonString(
-            '{"message":"Hello Ada!"}',
-            (string) $response->getBody(),
-        );
+        self::assertJsonStringEqualsJsonString('{"message":"Hello Ada!"}', (string) $response->getBody());
     }
 
     #[Test]
