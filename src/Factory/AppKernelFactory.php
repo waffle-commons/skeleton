@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Factory;
 
+use App\Kernel;
+use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
+use Psr\Http\Message\StreamFactoryInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use RuntimeException;
 use Waffle\Commons\Cache\Factory\CacheFactory;
@@ -14,6 +17,7 @@ use Waffle\Commons\Container\Container;
 use Waffle\Commons\Contracts\Cache\CacheInterface;
 use Waffle\Commons\Contracts\Cache\Constant as CacheConstant;
 use Waffle\Commons\Contracts\Constant\Constant;
+use Waffle\Commons\Contracts\Container\ContainerInterface;
 use Waffle\Commons\Contracts\Core\KernelInterface;
 use Waffle\Commons\Contracts\EventDispatcher\EventListenerInterface;
 use Waffle\Commons\Contracts\Handler\ArgumentResolverInterface;
@@ -21,19 +25,18 @@ use Waffle\Commons\Contracts\Security\Csrf\Constant as CsrfConstant;
 use Waffle\Commons\Contracts\Security\Csrf\CsrfTokenManagerInterface;
 use Waffle\Commons\Contracts\Service\ReflectionServiceInterface;
 use Waffle\Commons\ErrorHandler\Middleware\ErrorHandlerMiddleware;
-use Waffle\Handler\ControllerArgumentResolver;
-use Waffle\Handler\ControllerDispatcher;
-use Waffle\Service\ReflectionService;
 use Waffle\Commons\ErrorHandler\Renderer\JsonErrorRenderer;
 use Waffle\Commons\EventDispatcher\Dispatcher\EventDispatcher;
 use Waffle\Commons\EventDispatcher\Provider\ListenerProvider;
 use Waffle\Commons\Http\Factory\ResponseFactory;
+use Waffle\Commons\Http\Factory\StreamFactory;
+use Waffle\Commons\HttpClient\Client;
 use Waffle\Commons\Log\Channel\LogChannel;
 use Waffle\Commons\Log\StreamLogger;
 use Waffle\Commons\Pipeline\CoreRoutingMiddleware;
-use Waffle\Commons\Pipeline\MiddlewareStack;
 use Waffle\Commons\Pipeline\Middleware\SecureHeadersMiddleware;
 use Waffle\Commons\Pipeline\Middleware\TrustedHostMiddleware;
+use Waffle\Commons\Pipeline\MiddlewareStack;
 use Waffle\Commons\Routing\Router;
 use Waffle\Commons\Security\Container\SecureContainer;
 use Waffle\Commons\Security\Csrf\CsrfTokenManager;
@@ -41,15 +44,17 @@ use Waffle\Commons\Security\Middleware\AnonymousSessionMiddleware;
 use Waffle\Commons\Security\Middleware\CsrfMiddleware;
 use Waffle\Commons\Security\Middleware\SecurityMiddleware;
 use Waffle\Commons\Security\Security;
-use Workspace\Kernel;
+use Waffle\Handler\ControllerArgumentResolver;
+use Waffle\Handler\ControllerDispatcher;
+use Waffle\Service\ReflectionService;
 
 /**
- * The Glue Code: Assembles the application components.
+ * Code d'assemblage : monte les composants de l'application.
  */
 final class AppKernelFactory
 {
     /**
-     * Creates the fully assembled Kernel.
+     * Construit le Kernel entièrement assemblé.
      */
     public static function create(string $env = Constant::ENV_PROD, bool $debug = false): KernelInterface
     {
@@ -57,118 +62,141 @@ final class AppKernelFactory
         $root = APP_ROOT;
         $rootConfig = $root . DIRECTORY_SEPARATOR . APP_CONFIG;
 
-        // 1. Instantiate the concrete Container (from waffle-commons/container)
+        // 1. Instanciation du Container concret (paquet waffle-commons/container).
         $container = new Container();
 
-        // Register PSR-17 Factory (Required for Controllers AND ErrorHandler)
+        // Enregistrement de la factory PSR-17 (requise par les contrôleurs ET l'ErrorHandler).
         $responseFactory = new ResponseFactory();
         if (class_exists(ResponseFactory::class)) {
             $container->set(ResponseFactoryInterface::class, $responseFactory);
         }
 
-        // 2. Build the env registry from .env files + process env (Beta-1 hardening:
-        //    DotEnv no longer mutates the global PHP environment, so we merge it
-        //    with the live process env here. Process env wins on conflict so
-        //    Docker/K8s-provided values still override .env defaults).
+        // Enregistrement de la factory PSR-17 (requise par le client HTTP).
+        $streamFactory = new StreamFactory();
+        $container->set(StreamFactoryInterface::class, $streamFactory);
+
+        // Enregistrement du client HTTP PSR-18 (paquet waffle-commons/http-client).
+        $httpClient = new Client($responseFactory, $streamFactory);
+        $container->set(ClientInterface::class, $httpClient);
+
+        // 2. Construction du registre d'environnement à partir des fichiers .env
+        //    et de l'environnement processus (durcissement Beta-1 : DotEnv ne mute
+        //    plus l'environnement PHP global ; on le fusionne ici avec l'env vivant
+        //    du processus. L'env processus l'emporte en cas de conflit, ce qui
+        //    permet aux valeurs Docker/K8s d'écraser les défauts du .env).
         $processEnv = getenv();
         $envRegistry = array_merge(new DotEnv($root)->load(), $processEnv);
 
-        // 3. Instantiate the concrete Config (from waffle-commons/config)
+        // 3. Instanciation de la Config concrète (paquet waffle-commons/config).
         $config = new Config(configDir: $rootConfig, environment: $env, env: $envRegistry);
-        // STAB-01 (Beta-1): no static GlobalsFactory — WaffleRuntime constructs
-        // its own per-process instance. Trusted-host enforcement lives in
-        // TrustedHostMiddleware (RFC-003 §3.2).
+        // STAB-01 (Beta-1) : plus de GlobalsFactory statique — WaffleRuntime construit
+        // sa propre instance par processus. L'enforcement des hôtes de confiance vit
+        // dans TrustedHostMiddleware (RFC-003 §3.2).
         $trustedHosts = $config->getArray(key: 'waffle.trusted_hosts');
 
-        // SEC-01 (Beta-1, option C): stateless HMAC CSRF manager bound to a
-        // per-browser anonymous SID. Secret comes from config (env-interpolated)
-        // with a direct getenv() fallback; missing or short ⇒ boot abort in prod.
+        // SEC-01 (Beta-1, option C) : gestionnaire CSRF sans état, basé sur un HMAC
+        // lié à un SID anonyme par navigateur. Le secret vient de la config (avec
+        // interpolation d'env) ou, à défaut, d'un getenv() direct ; absent ou trop
+        // court ⇒ avortement du boot en production.
         $csrfTokenManager = new CsrfTokenManager(secret: self::resolveCsrfSecret($config, $env));
         $container->set(CsrfTokenManagerInterface::class, $csrfTokenManager);
 
-        // 3. Instantiate Security (from waffle-commons/security)
+        // 3. Instanciation de Security (paquet waffle-commons/security).
         $security = new Security($config);
 
-        // 4. Wrap the container with Security Decorator
+        // 4. Décoration du container par le SecureContainer.
         $secureContainer = new SecureContainer($container, $security);
 
-        // 5. Instantiate the Pipeline Middleware
+        // 5. Instanciation des middlewares du pipeline.
         $stack = new MiddlewareStack();
 
-        // We create the renderer and the middleware.
-        // It must be PREPENDED to catch errors from all subsequent middlewares (Routing, Security, Dispatcher).
+        // On crée le renderer et le middleware d'erreur.
+        // Il doit être PREPEND-é pour capter les erreurs de tous les middlewares
+        // suivants (Routing, Security, Dispatcher).
         $errorRenderer = new JsonErrorRenderer($responseFactory, $debug);
         $errorLogger = new StreamLogger();
         $errorHandler = new ErrorHandlerMiddleware(renderer: $errorRenderer, logger: $errorLogger);
 
         $stack->prepend(middleware: $errorHandler);
 
-        // 5a. Host header allowlist — fail-fast before routing/security/dispatch.
-        // Canonical Beta-1 order: ErrorHandler → TrustedHost → AnonymousSession →
+        // 5a. Allow-list des hôtes — première barrière exécutable du pipeline,
+        // alimentée par `waffle.trusted_hosts` (app.yaml). L'ErrorHandler reste
+        // « prepend »-é au-dessus, à dessein : il transforme un rejet d'hôte
+        // malformé en réponse JSON 400 propre plutôt qu'en erreur fatale.
+        // Ordre canonique Beta-1 : ErrorHandler → TrustedHost → AnonymousSession →
         // Routing → Csrf → Security → SecureHeaders → Dispatcher.
         $stack->add(middleware: new TrustedHostMiddleware($trustedHosts));
 
-        // 5a-bis. Per-browser anonymous SID. Must run before Csrf so the SID
-        // attribute is populated for the HMAC binding (SEC-01 option C).
+        // 5a-bis. SID anonyme par navigateur. Doit s'exécuter avant Csrf pour
+        // que l'attribut SID soit déjà alimenté lors du binding HMAC (SEC-01 option C).
         $stack->add(middleware: new AnonymousSessionMiddleware());
 
-        // 5b. Event Dispatcher setup
+        // 5b. Mise en place du dispatcher d'événements.
         $listenerProvider = new ListenerProvider();
         $eventDispatcher = new EventDispatcher($listenerProvider);
 
-        // Auto-discover listeners from EventListener directory
+        // Auto-découverte des listeners dans le dossier EventListener.
         $eventListenersPath = $config->getString('waffle.paths.event_listeners');
         if (is_dir($eventListenersPath)) {
             self::discoverAndRegisterListeners($listenerProvider, $eventListenersPath);
         }
 
-        // 6. Instantiate the Kernel
+        // 6. Instanciation du Kernel.
         $kernelLogger = new StreamLogger(channel: LogChannel::CORE);
         $kernel = new Kernel(logger: $kernelLogger);
         $kernel->setEventDispatcher($eventDispatcher);
 
-        // 6a. Leftover-purge §3: bootstrap-side wiring of the terminal-handler trio.
-        // The kernel no longer instantiates these inline; the factory owns the
-        // composition and the kernel just resolves from the container.
-        $reflectionService = new ReflectionService();
-        $argumentResolver = new ControllerArgumentResolver($container, $reflectionService);
-        $controllerDispatcher = new ControllerDispatcher(
-            container: $container,
-            dispatcher: $eventDispatcher,
-            argumentResolver: $argumentResolver,
-        );
-        $container->set(ReflectionServiceInterface::class, $reflectionService);
-        $container->set(ArgumentResolverInterface::class, $argumentResolver);
-        $container->set(RequestHandlerInterface::class, $controllerDispatcher);
+        // 6a. Câblage découplé du trio terminal (Beta 2 — Phase 4).
+        // La factory ne construit plus les services à la main : elle déclare des
+        // définitions dans le Container, et AbstractKernel::handle() les résout
+        // à la volée via le standard PSR-11 (Container::build() invoque chaque
+        // Closure avec lui-même en argument, cf. container/src/Container.php).
+        // Le dispatcher d'événements est capturé dans la closure pour rester
+        // injecté sans dépendre d'un slot supplémentaire dans le conteneur.
+        $container->set(ReflectionServiceInterface::class, new ReflectionService());
+        $container->set(ArgumentResolverInterface::class, static function (ContainerInterface $c): ArgumentResolverInterface {
+            /** @var ReflectionServiceInterface $reflection */
+            $reflection = $c->get(ReflectionServiceInterface::class);
 
-        // 7. Instantiate the PSR-16 cache (RFC-013) and register it for downstream consumers.
+            return new ControllerArgumentResolver($c, $reflection);
+        });
+        $container->set(RequestHandlerInterface::class, static function (ContainerInterface $c) use (
+            $eventDispatcher,
+        ): RequestHandlerInterface {
+            /** @var ArgumentResolverInterface $resolver */
+            $resolver = $c->get(ArgumentResolverInterface::class);
+
+            return new ControllerDispatcher(container: $c, dispatcher: $eventDispatcher, argumentResolver: $resolver);
+        });
+
+        // 7. Instanciation du cache PSR-16 (RFC-013) et enregistrement pour les consommateurs en aval.
         $cache = self::buildCache($root, $config);
         $container->set(CacheInterface::class, $cache);
 
-        // 8. Instantiate and Boot Router
+        // 8. Instanciation et démarrage du Router.
         $controllersPath = $config->getString(key: 'waffle.paths.controllers');
         if (is_string($controllersPath)) {
-            // Instantiate Router with the shared PSR-16 cache
+            // Router instancié avec le cache PSR-16 partagé.
             $router = new Router($root . DIRECTORY_SEPARATOR . $controllersPath, $cache);
             $router->boot(container: $secureContainer);
 
-            // Create the Bridge Middleware and add it to the Stack
-            // This connects the Router to the Pipeline
-            $routingMiddleware = new CoreRoutingMiddleware($router);
-            // This connects the SecureMiddleware to the Pipeline
+            // Création du middleware de pont et ajout dans le stack.
+            // Il relie le Router au pipeline.
+            $routingMiddleware = new CoreRoutingMiddleware($router, $responseFactory);
+            // Il relie le SecureMiddleware au pipeline.
             $secureLogger = new StreamLogger(channel: LogChannel::SECURITY);
             $secureMiddleware = new SecurityMiddleware(secureContainer: $secureContainer, logger: $secureLogger);
             $stack->add(middleware: $routingMiddleware);
-            // CsrfMiddleware must come after Routing (reads `_classname`/`_method`
-            // to find #[RequiresCsrfToken]) and before Security.
+            // Le CsrfMiddleware doit s'exécuter après Routing (il lit `_classname`
+            // et `_method` pour repérer #[RequiresCsrfToken]) et avant Security.
             $stack->add(middleware: new CsrfMiddleware($csrfTokenManager));
             $stack->add(middleware: $secureMiddleware);
 
-            // Secure headers middleware
+            // Middleware d'en-têtes sécurisés.
             $stack->add(middleware: new SecureHeadersMiddleware());
         }
 
-        // 9. Inject Dependencies
+        // 9. Injection des dépendances.
         if (method_exists($kernel, 'setConfiguration')) {
             $kernel->setConfiguration($config);
         }
@@ -189,10 +217,11 @@ final class AppKernelFactory
     }
 
     /**
-     * Resolves the CSRF signing secret with sane fallbacks. Config wins; otherwise
-     * read the env directly. Production refuses to boot when the secret is missing
-     * or shorter than `CsrfConstant::MIN_SECRET_BYTES`; non-prod environments accept
-     * a one-shot random secret so dev/test still boot cleanly.
+     * Résout le secret de signature CSRF avec des fallbacks raisonnables. La
+     * config gagne ; sinon on lit directement l'environnement. La production
+     * refuse de démarrer si le secret est absent ou plus court que
+     * `CsrfConstant::MIN_SECRET_BYTES` ; en hors-prod, un secret aléatoire
+     * éphémère permet à dev/test de démarrer proprement.
      */
     private static function resolveCsrfSecret(Config $config, string $env): string
     {
@@ -212,22 +241,23 @@ final class AppKernelFactory
 
         if ($env === Constant::ENV_PROD) {
             throw new RuntimeException(sprintf(
-                'CSRF secret missing or shorter than %d bytes in production. '
-                . 'Set "waffle.security.csrf.secret" or env %s.',
+                'Secret CSRF manquant ou plus court que %d octets en production. '
+                . 'Renseignez "waffle.security.csrf.secret" ou la variable d\'environnement %s.',
                 CsrfConstant::MIN_SECRET_BYTES,
                 CsrfConstant::SECRET_ENV_KEY,
             ));
         }
 
-        // Dev/test fallback: ephemeral per-process secret. Tokens issued under it
-        // will NOT survive a worker restart — that is fine for non-prod use.
+        // Fallback dev/test : secret éphémère par processus. Les jetons émis sous
+        // ce secret ne survivront PAS au redémarrage d'un worker — ce qui est
+        // acceptable hors production.
         return random_bytes(CsrfConstant::MIN_SECRET_BYTES);
     }
 
     /**
-     * Builds the PSR-16 cache adapter chosen by `waffle.cache.adapter`.
+     * Construit l'adaptateur de cache PSR-16 choisi par `waffle.cache.adapter`.
      *
-     * Falls back to the in-memory ArrayCache when no adapter is configured.
+     * Retombe sur le ArrayCache en mémoire si aucun adaptateur n'est configuré.
      */
     public static function buildCache(string $root, Config $config): CacheInterface
     {
@@ -244,8 +274,9 @@ final class AppKernelFactory
     }
 
     /**
-     * Auto-discovers and registers event listeners from a directory.
-     * Scans for classes implementing EventListenerInterface with #[AsEventListener] attributes.
+     * Auto-découvre et enregistre les listeners d'événements depuis un dossier.
+     * Scanne les classes implémentant EventListenerInterface portant l'attribut
+     * #[AsEventListener].
      */
     private static function discoverAndRegisterListeners(ListenerProvider $provider, string $directory): void
     {
@@ -268,12 +299,12 @@ final class AppKernelFactory
                 continue;
             }
 
-            // Quick check: does this file contain AsEventListener attribute?
+            // Vérification rapide : le fichier contient-il l'attribut AsEventListener ?
             if (!str_contains($content, 'AsEventListener')) {
                 continue;
             }
 
-            // Extract FQCN using token_get_all (same approach as ReflectionTrait)
+            // Extraction du FQCN via token_get_all (même approche que ReflectionTrait).
             $fqcn = self::extractClassName($file->getPathname());
             if ($fqcn === '' || !class_exists($fqcn)) {
                 continue;
@@ -288,7 +319,8 @@ final class AppKernelFactory
     }
 
     /**
-     * Extracts the fully qualified class name from a PHP file using token_get_all.
+     * Extrait le nom de classe pleinement qualifié d'un fichier PHP via
+     * token_get_all.
      */
     private static function extractClassName(string $path): string
     {

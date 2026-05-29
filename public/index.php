@@ -16,13 +16,14 @@ new DotEnv(path: APP_ROOT)->load();
 $env = $_ENV[Constant::APP_ENV] ?? Constant::ENV_PROD;
 $debug = filter_var($_ENV[Constant::APP_DEBUG] ?? false, FILTER_VALIDATE_BOOL);
 
-// 1. Context & Glue
-// We use the Factory to create the concrete implementations
+// 1. Contexte & assemblage.
+// On délègue à la Factory la création des implémentations concrètes.
 $kernel = AppKernelFactory::create(env: $env, debug: $debug);
 
-// 2. Runtime (Agnostic)
-// The runtime now just orchestrates: FrankenPHP Loop [Kernel + Request -> Emitter]
-// STAB-01: WaffleRuntime owns the per-process GlobalsFactory; no static-state hand-off.
+// 2. Runtime (agnostique).
+// Le runtime orchestre simplement la boucle FrankenPHP [Kernel + Request -> Emitter].
+// STAB-01 : WaffleRuntime possède sa propre GlobalsFactory par processus ; aucun
+// passage d'état statique.
 $maxRequests = (int)($_SERVER['MAX_REQUESTS'] ?? 500);
 new WaffleRuntime()
     ->loop(

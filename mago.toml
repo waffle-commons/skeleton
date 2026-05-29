@@ -1,5 +1,5 @@
-# Mago Configuration - Waffle Commons Skeleton (Beta 0)
-# For full documentation, see https://mago.carthage.software/tools/overview
+# Configuration Mago — Skeleton Waffle Commons (Beta 0).
+# Documentation complète : https://mago.carthage.software/tools/overview
 php-version = "8.5.5"
 
 [source]
@@ -8,11 +8,11 @@ includes = ["vendor"]
 excludes = []
 
 # -----------------------------------------------------------------------------
-# Mago Guard — Beta 0 standardized architectural perimeter
+# Mago Guard — périmètre architectural standardisé Beta 0.
 # -----------------------------------------------------------------------------
-# The skeleton is a starter application. Its userland code lives under `App\`
-# and may consume the entire waffle-commons ecosystem and the `Waffle\`
-# framework facade.
+# Le skeleton est une application de démarrage. Son code utilisateur vit sous
+# `App\` et peut consommer l'ensemble de l'écosystème waffle-commons ainsi que
+# la façade `Waffle\` du framework.
 [guard]
 mode = "default"
 excludes = ["tests/bootstrap.php"]
@@ -47,17 +47,17 @@ trailing-comma = true
 end-of-line = "lf"
 
 [linter]
-# Zero-Baseline policy (Beta 0): no `baseline = ...` is permitted.
+# Politique Zéro-Baseline (Beta 0) : aucun `baseline = ...` n'est autorisé.
 integrations = ["phpunit"]
 
 [linter.rules]
-# Security - Zero tolerance
+# Sécurité — tolérance zéro.
 no-insecure-comparison = { level = "error" }
 no-literal-password = { level = "error" }
 no-debug-symbols = { level = "error" }
 disallowed-functions = { level = "error", functions = ["eval", "exec", "system", "shell_exec", "passthru", "phpinfo"] }
 
-# Code quality - Strict
+# Qualité de code — stricte.
 prefer-interface = { level = "error" }
 strict-types = { level = "error" }
 cyclomatic-complexity = { level = "warning", threshold = 20 }
@@ -65,12 +65,12 @@ too-many-methods = { level = "warning", threshold = 20 }
 kan-defect = { level = "warning", threshold = 2.5 }
 no-ini-set = { enabled = false }
 
-# Style - Notes (informational)
+# Style — notes (informatives).
 prefer-arrow-function = { level = "note" }
 no-redundant-nullsafe = { level = "note" }
 
 [analyzer]
-# Zero-Baseline policy (Beta 0): no `baseline = ...` is permitted.
+# Politique Zéro-Baseline (Beta 0) : aucun `baseline = ...` n'est autorisé.
 find-unused-definitions = true
 find-unused-expressions = true
 analyze-dead-code = true

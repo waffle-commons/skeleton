@@ -6,6 +6,4 @@ namespace App;
 
 use Waffle\Kernel as Base;
 
-final class Kernel extends Base
-{
-}
+final class Kernel extends Base {}

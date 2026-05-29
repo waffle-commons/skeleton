@@ -1,34 +1,35 @@
-# Main application configuration for the Waffle Framework
+# Configuration principale de l'application Waffle.
 waffle:
-  # App environment (dev, prod, test). Set via server environment variable.
+  # Environnement applicatif (dev, prod, test). Renseigné par la variable d'environnement serveur.
   env: '%env(APP_ENV)%'
-  # Debug mode. Set to false in production for security.
+  # Mode debug. À mettre à false en production pour des raisons de sécurité.
   debug: '%env(APP_DEBUG)%'
-  # Security Hardening: Trusted Hosts
-  # List of allowed domains. If empty, all hosts are allowed (DEV only).
-  # In PROD, this MUST be configured to prevent Host Header Injection.
+  # Durcissement sécurité : hôtes de confiance.
+  # Liste des domaines autorisés. Si vide, tous les hôtes sont acceptés (DEV uniquement).
+  # En PROD, ce paramètre DOIT être renseigné pour prévenir l'injection d'en-tête Host.
   trusted_hosts:
     - localhost
   security:
     level: 10
     csrf:
-      # 32+ byte signing secret for stateless HMAC-signed CSRF tokens (Beta-1 / SEC-01).
-      # Resolved from env WAFFLE_CSRF_SECRET. In prod, a missing/short secret
-      # aborts boot — set it in your deployment manifest before going live.
+      # Secret de signature de 32 octets ou plus pour les jetons CSRF HMAC sans état (Beta-1 / SEC-01).
+      # Résolu depuis l'env WAFFLE_CSRF_SECRET. En prod, un secret absent ou trop
+      # court avorte le boot — renseignez-le dans votre manifeste de déploiement
+      # avant la mise en ligne.
       secret: '%env(WAFFLE_CSRF_SECRET)%'
   paths:
     controllers: 'src/Controller'
     services: 'src/Service'
     event_listeners: 'app/EventListener'
-  # Logging configuration (PSR-3)
+  # Configuration de la journalisation (PSR-3).
   log:
     channel: app
     stream: 'php://stderr'
-  # PSR-16 cache (RFC-013). Drives the Router cache, and the upcoming CSRF store.
+  # Cache PSR-16 (RFC-013). Alimente le cache du Router et le futur store CSRF.
   cache:
     adapter: 'redis'                    # array | file | redis
-    directory: 'var/cache/psr16'       # resolved against APP_ROOT (file adapter)
-    redis_dsn: '%env(REDIS_DSN)%'      # redis adapter only
-    default_ttl: 3600                  # seconds, optional
-    prefix: 'waffle:cache:'            # redis adapter only, optional
+    directory: 'var/cache/psr16'       # résolu par rapport à APP_ROOT (adaptateur file)
+    redis_dsn: '%env(REDIS_DSN)%'      # adaptateur redis uniquement
+    default_ttl: 3600                  # en secondes, optionnel
+    prefix: 'waffle:cache:'            # adaptateur redis uniquement, optionnel
 

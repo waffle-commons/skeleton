@@ -1,10 +1,10 @@
 <?php
 
 /**
- * Waffle Preloader Script
+ * Script de préchargement Waffle.
  *
- * This script is executed once when the server starts.
- * It loads the framework classes into shared memory (Opcache) to speed up execution.
+ * Exécuté une seule fois au démarrage du serveur. Il charge les classes du
+ * framework en mémoire partagée (Opcache) pour accélérer l'exécution.
  */
 
 if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
@@ -12,17 +12,17 @@ if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
 }
 
 (function () {
-    // The application root (/app in Docker)
+    // Racine de l'application (/app dans Docker).
     $projectDir = dirname(__DIR__);
 
-    // List of critical directories to preload
-    // Targeting the vendor/waffle-commons directory to load the entire framework
+    // Liste des dossiers critiques à précharger.
+    // On cible vendor/waffle-commons pour charger l'ensemble du framework.
     $paths = [
         $projectDir . '/vendor/waffle-commons',
-        // Additional critical libraries can be added here
+        // D'autres bibliothèques critiques peuvent être ajoutées ici.
     ];
 
-    // Recursive function to scan and compile
+    // Fonction récursive de parcours et de compilation.
     $preload = function (string $dir) use (&$preload) {
         if (!is_dir($dir)) {
             return;
@@ -39,25 +39,25 @@ if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
             if (is_dir($path)) {
                 $preload($path);
             } elseif (str_ends_with($path, '.php')) {
-                // Ignore test files or binaries
+                // Exclusion des fichiers de tests et des binaires.
                 if (str_contains($path, '/tests/') || str_contains($path, '/bin/')) {
                     continue;
                 }
 
                 try {
-                    // This is where the magic happens: compiling the file into memory
+                    // C'est ici que la magie opère : compilation du fichier en mémoire.
                     opcache_compile_file($path);
                 } catch (Throwable $t) {
-                    // Silently ignore preloading errors
-                    // (e.g., classes that cannot be loaded without context)
-                    error_log("Preloading failed for $path: " . $t->getMessage());
+                    // Les erreurs de préchargement sont volontairement silencieuses
+                    // (p. ex. des classes qui ne peuvent pas être chargées hors contexte).
+                    error_log("Échec du préchargement pour $path : " . $t->getMessage());
                 }
             }
         }
         closedir($handle);
     };
 
-    // Execute preloading
+    // Exécution du préchargement.
     foreach ($paths as $path) {
         $preload($path);
     }

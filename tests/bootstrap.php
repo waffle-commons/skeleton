@@ -9,4 +9,4 @@ const APP_CONFIG = 'temp_config';
 
 require_once __DIR__ . '/src/AbstractTestCase.php';
 
-// required test helpers, so we include them manually.
+// Helpers de test requis : inclusion manuelle.

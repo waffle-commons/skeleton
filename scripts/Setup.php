@@ -3,33 +3,33 @@
 namespace Scripts;
 
 /**
- * Waffle Skeleton Setup Script.
+ * Script de mise en place du skeleton Waffle.
  *
- * Handles post-create-project and post-install tasks.
- * No external dependencies required (Pure PHP).
+ * Gère les tâches post-create-project et post-install. Sans dépendance externe
+ * (PHP pur).
  */
 class Setup
 {
     /**
-     * Triggered after "composer create-project"
-     * * @param object $event Composer\Script\Event (duck typed to avoid dependency)
+     * Déclenché après "composer create-project".
+     * * @param object $event Composer\Script\Event (typage duck pour éviter la dépendance)
      */
     public static function postCreateProject(object $event): void
     {
         $io = $event->getIO();
         $rootDir = dirname(__DIR__);
 
-        $io->write('<info>🦁 Configuring Waffle Commons Skeleton...</info>');
+        $io->write('<info>🦁 Configuration du skeleton Waffle Commons...</info>');
 
         self::createEnvFile($rootDir, $io);
         self::generateAppSecret($rootDir, $io);
         self::createVarDirectories($rootDir, $io);
 
-        $io->write('<info>✅ Waffle Ecosystem is ready!</info>');
+        $io->write('<info>✅ L\'écosystème Waffle est prêt !</info>');
     }
 
     /**
-     * Triggered after "composer install"
+     * Déclenché après "composer install".
      * * @param object $event Composer\Script\Event
      */
     public static function postInstall(object $event): void
@@ -39,7 +39,7 @@ class Setup
 
         self::createVarDirectories($rootDir, $io);
 
-        // Ensure .env exists (but don't overwrite if it exists)
+        // S'assurer que .env existe (sans écraser un fichier existant).
         if (!file_exists($rootDir . '/.env')) {
             self::createEnvFile($rootDir, $io);
         }
@@ -55,12 +55,12 @@ class Setup
         }
 
         if (!file_exists($envExample)) {
-            $io->writeError('<error>.env.example file not found!</error>');
+            $io->writeError('<error>Fichier .env.example introuvable !</error>');
             return;
         }
 
         copy($envExample, $envFile);
-        $io->write(' -> Created <comment>.env</comment> from template.');
+        $io->write(' -> <comment>.env</comment> créé depuis le modèle.');
     }
 
     private static function generateAppSecret(string $rootDir, object $io): void
@@ -73,12 +73,12 @@ class Setup
 
         $content = file_get_contents($envFile);
 
-        // Check if secret is already changed or not present
+        // Vérification : le secret a-t-il déjà été modifié ou n'est-il pas présent ?
         if (!str_contains($content, 'APP_SECRET=ChangeMeInProduction')) {
             return;
         }
 
-        // Generate a 32-byte random hex string (64 chars)
+        // Génération d'une chaîne hexadécimale aléatoire de 32 octets (64 caractères).
         $secret = bin2hex(random_bytes(32));
 
         $content = str_replace(
@@ -88,7 +88,7 @@ class Setup
         );
 
         file_put_contents($envFile, $content);
-        $io->write(' -> Generated secure <comment>APP_SECRET</comment>.');
+        $io->write(' -> <comment>APP_SECRET</comment> sécurisé généré.');
     }
 
     private static function createVarDirectories(string $rootDir, object $io): void
@@ -102,11 +102,11 @@ class Setup
             $path = $rootDir . '/' . $dir;
             if (!is_dir($path)) {
                 mkdir($path, 0777, true);
-                // Try to set permissions for Docker compatibility (if supported)
+                // Tentative de permissions adaptées à Docker (si supportées).
                 @chmod($path, 0777);
             }
         }
 
-        $io->write(' -> Ensured <comment>var/</comment> directories exist.');
+        $io->write(' -> Dossiers <comment>var/</comment> garantis présents.');
     }
 }
