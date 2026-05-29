@@ -44,7 +44,11 @@
         "waffle-commons/waffle": "self.version"
     },
     "require-dev": {
-        "phpunit/phpunit": "^12.0"
+        "phpunit/phpunit": "^12.5",
+        "carthage-software/mago": "^1.29",
+        "vimeo/psalm": "^6.16",
+        "php-mock/php-mock-phpunit": "^2.15",
+        "cyclonedx/cyclonedx-php-composer": "^6.2"
     },
     "scripts": {
         "post-create-project-cmd": [
@@ -62,7 +66,9 @@
     },
     "config": {
         "allow-plugins": {
-            "php-http/discovery": true
+            "php-http/discovery": true,
+            "carthage-software/mago": true,
+            "cyclonedx/cyclonedx-php-composer": true
         },
         "sort-packages": true
     }
