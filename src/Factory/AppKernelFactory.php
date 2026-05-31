@@ -25,7 +25,10 @@ use Waffle\Commons\Contracts\Handler\ArgumentResolverInterface;
 use Waffle\Commons\Contracts\Security\Csrf\Constant as CsrfConstant;
 use Waffle\Commons\Contracts\Security\Csrf\CsrfTokenManagerInterface;
 use Waffle\Commons\Contracts\Service\ReflectionServiceInterface;
+use Waffle\Commons\Contracts\Data\Connection\ConnectionPoolInterface;
+use Waffle\Commons\Contracts\Data\Migration\MigrationRunnerInterface;
 use Waffle\Commons\Data\Connection\PDOConnectionPool;
+use Waffle\Commons\Data\Migration\MigrationRunner;
 use Waffle\Commons\ErrorHandler\Middleware\ErrorHandlerMiddleware;
 use Waffle\Commons\ErrorHandler\Renderer\JsonErrorRenderer;
 use Waffle\Commons\EventDispatcher\Dispatcher\EventDispatcher;
@@ -174,6 +177,16 @@ final class AppKernelFactory
         // 7. Instanciation du cache PSR-16 (RFC-013) et enregistrement pour les consommateurs en aval.
         $cache = self::buildCache($root, $config);
         $container->set(CacheInterface::class, $cache);
+
+        // 7a. Instanciation du pool de connexions (RFC-022) et enregistrement pour les consommateurs en aval.
+        $connectionPool = self::buildConnectionPool($config);
+        $container->set(ConnectionPoolInterface::class, $connectionPool);
+        $container->set(PDOConnectionPool::class, $connectionPool);
+
+        // 7b. Instanciation du migration runner (RFC-022) et enregistrement dans le conteneur.
+        $migrationRunner = new MigrationRunner(pool: $connectionPool, config: $config);
+        $container->set(MigrationRunnerInterface::class, $migrationRunner);
+        $container->set(MigrationRunner::class, $migrationRunner);
 
         // 8. Instanciation et démarrage du Router.
         $controllersPath = $config->getString(key: 'waffle.paths.controllers');

@@ -26,6 +26,8 @@ use Waffle\Commons\Container\Container;
 use Waffle\Commons\Contracts\Constant\Constant;
 use Waffle\Commons\Data\Migration\MigrationRunner;
 use Waffle\Commons\Routing\Router;
+use Waffle\Commons\Contracts\Data\Connection\ConnectionPoolInterface;
+use Waffle\Commons\Contracts\Data\Migration\MigrationRunnerInterface;
 use Waffle\Commons\Security\Container\SecureContainer;
 use Waffle\Commons\Security\Security;
 
@@ -48,6 +50,9 @@ $router = new Router(directory: $config->getString(key: 'waffle.paths.controller
 $connectionPool = AppKernelFactory::buildConnectionPool($config);
 $migrationRunner = new MigrationRunner(pool: $connectionPool, config: $config);
 
+$container->set(ConnectionPoolInterface::class, $connectionPool);
+$container->set(MigrationRunnerInterface::class, $migrationRunner);
+
 // Console application
 $app = new ConsoleApplication(
     name: 'Waffle',
@@ -60,6 +65,9 @@ $app = new ConsoleApplication(
 $app->add(command: new RouteListCommand(router: $router->boot(container: $secureContainer)));
 $app->add(command: new SecurityAuditCommand(router: $router->boot(container: $secureContainer)));
 $app->add(command: new CacheClearCommand(cache: $cache));
-$app->add(command: new MigrateCommand(runner: $migrationRunner, pool: $connectionPool));
+$app->add(command: new MigrateCommand(
+    runner: $container->get(MigrationRunnerInterface::class),
+    pool: $container->get(ConnectionPoolInterface::class),
+));
 
 exit($app->run());
