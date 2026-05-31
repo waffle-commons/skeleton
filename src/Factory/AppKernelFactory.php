@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Factory;
 
 use App\Kernel;
+use PDO;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
@@ -24,6 +25,7 @@ use Waffle\Commons\Contracts\Handler\ArgumentResolverInterface;
 use Waffle\Commons\Contracts\Security\Csrf\Constant as CsrfConstant;
 use Waffle\Commons\Contracts\Security\Csrf\CsrfTokenManagerInterface;
 use Waffle\Commons\Contracts\Service\ReflectionServiceInterface;
+use Waffle\Commons\Data\Connection\PDOConnectionPool;
 use Waffle\Commons\ErrorHandler\Middleware\ErrorHandlerMiddleware;
 use Waffle\Commons\ErrorHandler\Renderer\JsonErrorRenderer;
 use Waffle\Commons\EventDispatcher\Dispatcher\EventDispatcher;
@@ -271,6 +273,33 @@ final class AppKernelFactory
         ];
 
         return new CacheFactory()->create($adapter, $options);
+    }
+
+    /**
+     * Construit le pool de connexions PDO (RFC-022) à partir de `waffle.database.*`.
+     *
+     * La fabrique injectée n'ouvre une connexion que lorsque le pool en a besoin :
+     * en mode worker FrankenPHP, les sockets restent tièdes entre les requêtes,
+     * sont sondés (« ping-before-dispense ») puis reconnectés de façon transparente.
+     */
+    public static function buildConnectionPool(Config $config): PDOConnectionPool
+    {
+        $driver = $config->getString('waffle.database.driver') ?? 'mysql';
+        $host = $config->getString('waffle.database.host') ?? '127.0.0.1';
+        $port = $config->getString('waffle.database.port') ?? '3306';
+        $database = $config->getString('waffle.database.database') ?? '';
+        $username = $config->getString('waffle.database.username') ?? 'root';
+        $password = $config->getString('waffle.database.password') ?? '';
+        $charset = $config->getString('waffle.database.charset') ?? 'utf8mb4';
+
+        $dsn = sprintf('%s:host=%s;port=%s;dbname=%s;charset=%s', $driver, $host, $port, $database, $charset);
+
+        // Fabrique sans état, rejouée à chaque création de connexion par le pool.
+        return new PDOConnectionPool(
+            factory: static fn(): PDO => new PDO($dsn, $username, $password, [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            ]),
+        );
     }
 
     /**

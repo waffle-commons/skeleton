@@ -17,12 +17,14 @@ declare(strict_types=1);
 use App\Factory\AppKernelFactory;
 use Waffle\Commons\Config\Config;
 use Waffle\Commons\Console\Command\CacheClearCommand;
+use Waffle\Commons\Console\Command\MigrateCommand;
 use Waffle\Commons\Console\Command\RouteListCommand;
 use Waffle\Commons\Console\Command\SecurityAuditCommand;
 use Waffle\Commons\Console\ConsoleApplication;
 use Waffle\Commons\Console\Output\StreamOutput;
 use Waffle\Commons\Container\Container;
 use Waffle\Commons\Contracts\Constant\Constant;
+use Waffle\Commons\Data\Migration\MigrationRunner;
 use Waffle\Commons\Routing\Router;
 use Waffle\Commons\Security\Container\SecureContainer;
 use Waffle\Commons\Security\Security;
@@ -41,6 +43,11 @@ $secureContainer = new SecureContainer($container, $security);
 $cache = AppKernelFactory::buildCache($root, $config);
 $router = new Router(directory: $config->getString(key: 'waffle.paths.controllers'));
 
+// PDO connection pool (RFC-022) + migration runner, built here on the explicit
+// CLI path so no migration scan ever happens during an HTTP request.
+$connectionPool = AppKernelFactory::buildConnectionPool($config);
+$migrationRunner = new MigrationRunner(pool: $connectionPool, config: $config);
+
 // Console application
 $app = new ConsoleApplication(
     name: 'Waffle',
@@ -53,5 +60,6 @@ $app = new ConsoleApplication(
 $app->add(command: new RouteListCommand(router: $router->boot(container: $secureContainer)));
 $app->add(command: new SecurityAuditCommand(router: $router->boot(container: $secureContainer)));
 $app->add(command: new CacheClearCommand(cache: $cache));
+$app->add(command: new MigrateCommand(runner: $migrationRunner, pool: $connectionPool));
 
 exit($app->run());

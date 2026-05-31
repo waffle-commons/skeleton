@@ -32,4 +32,17 @@ waffle:
     redis_dsn: '%env(REDIS_DSN)%'      # adaptateur redis uniquement
     default_ttl: 3600                  # en secondes, optionnel
     prefix: 'waffle:cache:'            # adaptateur redis uniquement, optionnel
+  # Configuration de la base de données locale (RFC-022).
+  # Les identifiants sont résolus depuis l'environnement (.env / Docker / K8s).
+  # `migrations_path` est relatif à la racine du projet : lancez `bin/waffle
+  # db:migrate` depuis cette racine pour que les scripts SQL soient découverts.
+  database:
+    driver: 'mysql'
+    host: '%env(DB_HOST)%'
+    port: '%env(DB_PORT)%'
+    database: '%env(DB_NAME)%'
+    username: '%env(DB_USER)%'
+    password: '%env(DB_PASSWORD)%'
+    charset: 'utf8mb4'
+    migrations_path: 'migrations'
 
