@@ -17,6 +17,23 @@ waffle:
       # court avorte le boot — renseignez-le dans votre manifeste de déploiement
       # avant la mise en ligne.
       secret: '%env(WAFFLE_CSRF_SECRET)%'
+  # Pont d'Authentification Universel (RFC-021, paquet waffle-commons/auth).
+  auth:
+    # Secret partagé du pont (HMAC-SHA256) : signe les assertions d'identité
+    # X-Wfl-Assert-User et valide les JWT HS256 de la démo. 32 octets minimum —
+    # absent ou trop court ⇒ avortement du boot en production (principe
+    # fail-closed, RFC-021 §4.2). NE COMMITTEZ JAMAIS la valeur : renseignez-la
+    # dans votre .env local ou votre manifeste de déploiement.
+    secret: '%env(WAFFLE_AUTH_SECRET)%'
+    # Identifiant de tenant estampillé dans chaque assertion sortante (`ten`).
+    tenant: 'skeleton'
+    jwt:
+      # Émetteur et audience attendus des jetons Bearer de la démo (HS256).
+      issuer: 'https://waffle-dev.local'
+      audience: 'waffle-skeleton'
+    # Hôtes autorisés à recevoir l'assertion sortante X-Wfl-Assert-User via le
+    # client HTTP décoré (RFC-021 §4.7). Vide ⇒ aucune propagation sortante.
+    assert_hosts: []
   paths:
     controllers: 'src/Controller'
     services: 'src/Service'

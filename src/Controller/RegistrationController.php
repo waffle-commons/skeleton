@@ -6,7 +6,7 @@ namespace App\Controller;
 
 use App\Dto\RegistrationInput;
 use Psr\Http\Message\ResponseInterface;
-use Waffle\Commons\Routing\Attribute\Route;
+use Waffle\Commons\Contracts\Routing\Attribute\Route;
 use Waffle\Core\BaseController;
 use Waffle\Exception\RenderingException;
 

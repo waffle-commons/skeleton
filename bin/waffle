@@ -17,6 +17,7 @@ declare(strict_types=1);
 use App\Factory\AppKernelFactory;
 use Waffle\Commons\Config\Config;
 use Waffle\Commons\Console\Command\CacheClearCommand;
+use Waffle\Commons\Console\Command\DataWarmupCommand;
 use Waffle\Commons\Console\Command\MigrateCommand;
 use Waffle\Commons\Console\Command\RouteListCommand;
 use Waffle\Commons\Console\Command\SecurityAuditCommand;
@@ -24,7 +25,12 @@ use Waffle\Commons\Console\ConsoleApplication;
 use Waffle\Commons\Console\Output\StreamOutput;
 use Waffle\Commons\Container\Container;
 use Waffle\Commons\Contracts\Constant\Constant;
+use Waffle\Commons\Contracts\Data\Enum\Direction;
+use Waffle\Commons\Data\Compiler\SQLCompiler;
+use Waffle\Commons\Data\Compiler\SQLDialect;
 use Waffle\Commons\Data\Migration\MigrationRunner;
+use Waffle\Commons\Data\Query\Query;
+use Waffle\Commons\Data\Warmup\QueryWarmer;
 use Waffle\Commons\Routing\Router;
 use Waffle\Commons\Contracts\Data\Connection\ConnectionPoolInterface;
 use Waffle\Commons\Contracts\Data\Migration\MigrationRunnerInterface;
@@ -69,5 +75,23 @@ $app->add(command: new MigrateCommand(
     runner: $container->get(MigrationRunnerInterface::class),
     pool: $container->get(ConnectionPoolInterface::class),
 ));
+
+// Pre-compiled SQR warmup (`data:warmup`) — Roadmap Beta-3 "CLI Route & Cache
+// Warmup". The hot read queries below are compiled once to parameterised SQL,
+// serialised under var/cache/ and primed into OPcache shared memory, so the
+// first live request never pays the AST walk. Adapt the registry to your own
+// hot paths; warming never executes SQL against the database.
+$app->add(command: new DataWarmupCommand(warmers: [
+    new QueryWarmer(
+        queries: [
+            'users.recent' => Query::select('id')
+                ->from('users')
+                ->orderBy('id', Direction::Descending)
+                ->limit(20),
+        ],
+        compiler: new SQLCompiler(dialect: SQLDialect::MySQL),
+        cacheFile: $root . '/var/cache/data-warmup.php',
+    ),
+]));
 
 exit($app->run());

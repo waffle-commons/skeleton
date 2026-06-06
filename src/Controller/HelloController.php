@@ -8,8 +8,8 @@ use App\Dto\HelloInput;
 use App\Service\DemoService;
 use Psr\Http\Message\ResponseInterface;
 use RuntimeException;
+use Waffle\Commons\Contracts\Routing\Attribute\Route;
 use Waffle\Commons\Routing\Attribute\Argument;
-use Waffle\Commons\Routing\Attribute\Route;
 use Waffle\Core\BaseController;
 use Waffle\Exception\RenderingException;
 
