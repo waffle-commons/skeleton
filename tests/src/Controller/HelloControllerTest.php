@@ -60,7 +60,7 @@ final class HelloControllerTest extends AbstractTestCase
         /** @var array{gateway: string, intercepted_path: string, note: string} $payload */
         $payload = json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR);
 
-        self::assertSame('EcoShield', $payload['gateway']);
+        self::assertSame('Waffle', $payload['gateway']);
         self::assertSame('/legacy/api/users', $payload['intercepted_path']);
     }
 

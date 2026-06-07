@@ -8,8 +8,8 @@ use App\Dto\HelloInput;
 use App\Service\DemoService;
 use Psr\Http\Message\ResponseInterface;
 use RuntimeException;
+use Waffle\Commons\Contracts\Routing\Attribute\Route;
 use Waffle\Commons\Routing\Attribute\Argument;
-use Waffle\Commons\Routing\Attribute\Route;
 use Waffle\Core\BaseController;
 use Waffle\Exception\RenderingException;
 
@@ -19,7 +19,7 @@ use Waffle\Exception\RenderingException;
  *   - hydratation native d'un `#[Dto]` + validation par Property Hook,
  *   - interception d'exception par l'ErrorHandlerMiddleware,
  *   - route catch-all à priorité négative simulant le hand-off vers la
- *     passerelle EcoShield (proxy vers le backend hérité).
+ *     passerelle Waffle (proxy vers le backend hérité).
  */
 #[Route(path: '/', name: 'hello_')]
 final class HelloController extends BaseController
@@ -79,7 +79,7 @@ final class HelloController extends BaseController
 
     /**
      * Hand-off catch-all vers la passerelle (priorité -1000 ⇒ évaluée en dernier,
-     * après toutes les routes explicites). Dans la passerelle EcoShield, c'est
+     * après toutes les routes explicites). Dans une passerelle Waffle, c'est
      * ici qu'une requête non résolue serait transmise au backend hérité ; le
      * skeleton retourne un témoin JSON pour rendre le point d'interception
      * observable.
@@ -90,7 +90,7 @@ final class HelloController extends BaseController
     public function catchAll(string $path): ResponseInterface
     {
         return $this->jsonResponse(data: [
-            'gateway' => 'EcoShield',
+            'gateway' => 'Waffle',
             'intercepted_path' => '/' . $path,
             'note' => 'Route inconnue — en production, cette requête serait transmise au backend hérité via la passerelle.',
         ]);

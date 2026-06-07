@@ -92,6 +92,7 @@ A Waffle application follows a strict but simple structure:
 │   ├── app.yaml                  # Main Waffle Configuration
 │   └── preload.php               # Opcache Preloading Script
 ├── docker/                       # 🐳 Infrastructure as Code (Dockerfile, Caddyfile, PHP config)
+├── migrations/                   # 🗃️ Versioned SQL migration scripts (bin/waffle db:migrate)
 ├── public/                       # 🌍 Web Entry Point (index.php)
 ├── scripts/                      # 🛠️ Composer Lifecycle Scripts
 ├── src/                          # 🧠 Your Application Logic (Namespace: App\)
@@ -118,6 +119,9 @@ Waffle ships a native `DotEnv` parser (no third-party dependency). When you run 
 | `APP_SECRET`         | 32-byte Hex string used for cryptographic operations.                                                                                                                                                  |
 | `WAFFLE_CSRF_SECRET` | 32+ byte signing secret for stateless HMAC CSRF tokens (Beta-1 / SEC-01). Bound at boot by `AppKernelFactory::resolveCsrfSecret()`. In `prod`, a missing or short value aborts boot; non-prod falls back to a per-process random secret. |
 | `SERVER_NAME`        | The domain name used by Caddy (e.g., `example.com` or `localhost`).                                                                                                                                    |
+| `DB_HOST` / `DB_PORT` | Database host and port consumed by `waffle.database.*` (RFC-022).                                                                                                                                     |
+| `DB_NAME`            | Database / schema name.                                                                                                                                                                                |
+| `DB_USER` / `DB_PASSWORD` | Database credentials. Override from your orchestrator in production.                                                                                                                              |
 
 > **⚠ Precedence: OS env wins over `.env`.** `AppKernelFactory` merges your `.env` with the live process environment (Docker `environment:`, Kubernetes `env:`, shell exports, etc.) via `array_merge((new DotEnv($root))->load(), getenv())`. Because `array_merge` is rightmost-wins on string keys, **the OS value beats `.env`** on collision. If you edit `.env` and the change doesn't take effect, check whether the same variable is exported by your shell or `docker-compose.yml` — that export will silently override `.env`. This matches the Twelve-Factor convention. See [`documentation/how-to/configuration.md`](https://github.com/waffle-commons/documentation/blob/main/how-to/configuration.md) for the merge rules and the type-normalization foot-gun around `APP_DEBUG`/`DEBUG`.
 
@@ -142,6 +146,16 @@ waffle:
   paths:
     controllers: 'src/Controller'
     services: 'src/Service'
+  # Database & migrations (RFC-022). Credentials resolved from DB_* env vars.
+  database:
+    driver: 'mysql'
+    host: '%env(DB_HOST)%'
+    port: '%env(DB_PORT)%'
+    database: '%env(DB_NAME)%'
+    username: '%env(DB_USER)%'
+    password: '%env(DB_PASSWORD)%'
+    charset: 'utf8mb4'
+    migrations_path: 'migrations'
 ```
 
 ### Beta-1 security defaults
@@ -158,6 +172,19 @@ This means every controller action you write is, by default, subject to:
 - **Stateless HMAC CSRF on mutating routes** — opt actions in with `#[RequiresCsrfToken]`. Tokens are HMAC-bound to the per-browser `WAFFLE_SID` cookie issued by `AnonymousSessionMiddleware`.
 
 See the framework docs at [`waffle-commons/documentation`](https://github.com/waffle-commons/documentation) for the full design rationale.
+
+🗃️ Database & Migrations
+-------------------------
+
+Waffle ships a lightweight, forward-only SQL migration runner (RFC-022, via `waffle-commons/data`). Database access is configured under `waffle.database` in `config/app.yaml` (credentials from the `DB_*` env vars), and the connection pool + runner are wired in `src/Factory/AppKernelFactory.php` and registered as `db:migrate` in `bin/waffle`.
+
+Write versioned SQL scripts in `migrations/`, named `Version<YYYYMMDDNN>_<Description>.sql`, then apply the pending ones from the project root:
+
+```shell
+php bin/waffle db:migrate
+```
+
+Each migration runs in its own transaction and is recorded in a `waffle_migrations` table, so re-runs skip already-applied scripts. The skeleton ships a sample `migrations/Version2026053101_CreateUsersTable.sql` to get you started. See the [Database Migrations how-to](https://github.com/waffle-commons/documentation/blob/main/how-to/database-migrations.md) for the full workflow and the MySQL transactional-DDL caveat.
 
 👩‍💻 Usage Example
 -------------------
