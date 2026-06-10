@@ -60,8 +60,10 @@ use Waffle\Commons\Pipeline\Middleware\TrustedHostMiddleware;
 use Waffle\Commons\Pipeline\MiddlewareStack;
 use Waffle\Commons\Routing\Router;
 use Waffle\Commons\Security\Container\SecureContainer;
+use Waffle\Commons\Security\Cors\CorsPolicy;
 use Waffle\Commons\Security\Csrf\CsrfTokenManager;
 use Waffle\Commons\Security\Middleware\AnonymousSessionMiddleware;
+use Waffle\Commons\Security\Middleware\CorsMiddleware;
 use Waffle\Commons\Security\Middleware\CsrfMiddleware;
 use Waffle\Commons\Security\Middleware\SecurityMiddleware;
 use Waffle\Commons\Security\Security;
@@ -158,9 +160,21 @@ final class AppKernelFactory
         // Authentication → Routing → Csrf → Security → SecureHeaders → Dispatcher.
         $stack->add(middleware: new TrustedHostMiddleware($trustedHosts));
 
-        // 5a-bis. SID anonyme par navigateur. Doit s'exécuter avant Csrf pour
-        // que l'attribut SID soit déjà alimenté lors du binding HMAC (SEC-01 option C).
-        $stack->add(middleware: new AnonymousSessionMiddleware());
+        // 5a-cors. CORS fail-closed (SEC-04) — doit précéder le routage pour
+        // répondre au pré-vol OPTIONS avant le court-circuit OPTIONS du routeur.
+        // Liste blanche d'origines vide par défaut ⇒ toute requête cross-origin
+        // est refusée. Renseignez `waffle.security.cors.allowed_origins` (app.yaml).
+        /** @var list<string> $corsOrigins */
+        $corsOrigins = $config->getArray(key: 'waffle.security.cors.allowed_origins') ?? [];
+        $stack->add(middleware: new CorsMiddleware(new CorsPolicy(allowedOrigins: $corsOrigins), $responseFactory));
+
+        // 5a-bis. SID anonyme par navigateur. Doit s'exécuter avant Csrf pour que
+        // l'attribut SID soit déjà alimenté lors du binding HMAC (SEC-01). Le
+        // SecurityContext est injecté pour la ROTATION du SID à l'authentification
+        // (SEC-01 fixation de session) : un SID présenté avant login est régénéré.
+        /** @var SecurityContextInterface $securityContext */
+        $securityContext = $container->get(SecurityContextInterface::class);
+        $stack->add(middleware: new AnonymousSessionMiddleware($securityContext));
 
         // 5a-ter. Pont d'Authentification Universel (RFC-021 §3.2) : authentifie
         // la requête entrante (assertion de passerelle / Bearer JWT), alimente le
