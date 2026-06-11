@@ -33,9 +33,11 @@ final class EventListenerDiscovery
         ));
 
         foreach ($iterator as $file) {
-            if ($file instanceof \SplFileInfo) {
-                self::registerFile($provider, $file);
+            if (!$file instanceof \SplFileInfo) {
+                continue;
             }
+
+            self::registerFile($provider, $file);
         }
     }
 

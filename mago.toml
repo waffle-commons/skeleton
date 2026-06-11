@@ -69,6 +69,11 @@ kan-defect = { enabled = false }
 halstead = { enabled = false }
 literal-named-argument = { enabled = false }
 no-ini-set = { enabled = false }
+# Désactivée (alignée sur workspace) : la signature `create(env, debug)` de
+# `AppKernelFactory` est l'API d'amorçage canonique du kernel — `public/index.php`
+# lit `APP_DEBUG` indépendamment de `APP_ENV`, donc `bool $debug` est un paramètre
+# délibéré, pas un drapeau à fusionner dans une autre méthode.
+no-boolean-flag-parameter = { enabled = false }
 
 # Style — notes (informatives).
 prefer-arrow-function = { level = "note" }
