@@ -38,6 +38,7 @@ use Waffle\Commons\Contracts\Constant\Constant;
 use Waffle\Commons\Contracts\Container\ContainerInterface;
 use Waffle\Commons\Contracts\Core\KernelInterface;
 use Waffle\Commons\Contracts\Data\Connection\ConnectionPoolInterface;
+use Waffle\Commons\Contracts\Data\Connection\ConnectionTrackerInterface;
 use Waffle\Commons\Contracts\Data\Migration\MigrationRunnerInterface;
 use Waffle\Commons\Contracts\Handler\ArgumentResolverInterface;
 use Waffle\Commons\Contracts\Security\Csrf\Constant as CsrfConstant;
@@ -52,6 +53,7 @@ use Waffle\Commons\EventDispatcher\Provider\ListenerProvider;
 use Waffle\Commons\Http\Factory\ResponseFactory;
 use Waffle\Commons\Http\Factory\StreamFactory;
 use Waffle\Commons\HttpClient\Client;
+use Waffle\Commons\HttpClient\Security\SsrfGuard;
 use Waffle\Commons\Log\Channel\LogChannel;
 use Waffle\Commons\Log\StreamLogger;
 use Waffle\Commons\Pipeline\CoreRoutingMiddleware;
@@ -59,6 +61,7 @@ use Waffle\Commons\Pipeline\Middleware\SecureHeadersMiddleware;
 use Waffle\Commons\Pipeline\Middleware\TrustedHostMiddleware;
 use Waffle\Commons\Pipeline\MiddlewareStack;
 use Waffle\Commons\Routing\Router;
+use Waffle\Commons\Runtime\Trace\ConnectionTracker;
 use Waffle\Commons\Security\Container\SecureContainer;
 use Waffle\Commons\Security\Cors\CorsPolicy;
 use Waffle\Commons\Security\Csrf\CsrfTokenManager;
@@ -67,6 +70,8 @@ use Waffle\Commons\Security\Middleware\CorsMiddleware;
 use Waffle\Commons\Security\Middleware\CsrfMiddleware;
 use Waffle\Commons\Security\Middleware\SecurityMiddleware;
 use Waffle\Commons\Security\Security;
+use Waffle\Event\Listener\OrphanedConnectionListener;
+use Waffle\Event\TerminateEvent;
 use Waffle\Handler\ControllerArgumentResolver;
 use Waffle\Handler\ControllerDispatcher;
 use Waffle\Service\ReflectionService;
@@ -85,8 +90,22 @@ final class AppKernelFactory
         $root = APP_ROOT;
         $rootConfig = $root . DIRECTORY_SEPARATOR . APP_CONFIG;
 
+        $isDev = $env === Constant::ENV_DEV;
+
+        // DIAG-03 (dev) : registre des connexions ouvertes à portée requête. Injecté
+        // dans les propriétaires de connexions (pool PDO, Redis, flux) et inspecté
+        // par OrphanedConnectionListener en fin de requête. Null en prod ⇒ aucun coût.
+        $connectionTracker = $isDev ? new ConnectionTracker() : null;
+
         // 1. Instanciation du Container concret (paquet waffle-commons/container).
-        $container = new Container();
+        // DIAG-02 (dev) : lock() refuse de démarrer si un service partagé garde un
+        // état mutable sans implémenter ResettableInterface (scan worker-safety).
+        $container = new Container(strictComplianceScan: $isDev);
+        // Tracer enregistré comme service partagé ⇒ vidé à chaque boucle worker par
+        // Container::reset() (ResettableInterface), jamais propagé entre requêtes.
+        if ($connectionTracker !== null) {
+            $container->set(ConnectionTrackerInterface::class, $connectionTracker);
+        }
 
         // Enregistrement de la factory PSR-17 (requise par les contrôleurs ET l'ErrorHandler).
         $responseFactory = new ResponseFactory();
@@ -95,15 +114,8 @@ final class AppKernelFactory
         }
 
         // Enregistrement de la factory PSR-17 (requise par le client HTTP).
-        $streamFactory = new StreamFactory();
+        $streamFactory = new StreamFactory($connectionTracker);
         $container->set(StreamFactoryInterface::class, $streamFactory);
-
-        // Client HTTP PSR-18 brut (paquet waffle-commons/http-client). Il n'est
-        // PAS enregistré tel quel sous ClientInterface : il sert de transport
-        // interne au décorateur AuthenticatedClient du pont d'authentification,
-        // qui est enregistré comme ClientInterface plus bas (RFC-021 §4.7) —
-        // ainsi tout consommateur hérite de la propagation d'assertion sortante.
-        $httpClient = new Client($responseFactory, $streamFactory);
 
         // 2. Construction du registre d'environnement à partir des fichiers .env
         //    et de l'environnement processus (durcissement Beta-1 : DotEnv ne mute
@@ -130,6 +142,19 @@ final class AppKernelFactory
         // court ⇒ avortement du boot en production.
         $csrfTokenManager = new CsrfTokenManager(secret: self::resolveCsrfSecret($config, $env));
         $container->set(CsrfTokenManagerInterface::class, $csrfTokenManager);
+
+        // Client HTTP PSR-18 brut (paquet waffle-commons/http-client). Il n'est
+        // PAS enregistré tel quel sous ClientInterface : il sert de transport
+        // interne au décorateur AuthenticatedClient du pont d'authentification,
+        // qui est enregistré comme ClientInterface plus bas (RFC-021 §4.7) —
+        // ainsi tout consommateur hérite de la propagation d'assertion sortante.
+        // Durci SEC-02 : un SsrfGuard résout et épingle chaque hôte sortant
+        // (CURLOPT_RESOLVE anti-rebinding) et refuse toute adresse privée /
+        // loopback / réservée. `waffle.security.ssrf.allowed_hosts` exempte les
+        // backends internes de confiance (noms exacts ou CIDR ; vide ⇒ strict).
+        /** @var list<string> $ssrfAllowedHosts */
+        $ssrfAllowedHosts = $config->getArray(key: 'waffle.security.ssrf.allowed_hosts') ?? [];
+        $httpClient = new Client($responseFactory, $streamFactory, new SsrfGuard(allowedHosts: $ssrfAllowedHosts));
 
         // 3-bis. Pont d'Authentification Universel (RFC-021, paquet waffle-commons/auth) :
         // schémas entrants + propagation sortante, câblés dans une fabrique dédiée.
@@ -200,6 +225,17 @@ final class AppKernelFactory
         $kernel = new Kernel(logger: $kernelLogger);
         $kernel->setEventDispatcher($eventDispatcher);
 
+        // DIAG-03 (dev) : alerte de fin de requête sur les connexions non libérées.
+        // Sur TerminateEvent (après émission de la réponse), le listener inspecte le
+        // tracer : un handle PDO encore emprunté ⇒ warning (fuite probable en worker) ;
+        // une connexion Redis persistante ou un flux ouvert ⇒ info (visibilité).
+        if ($connectionTracker !== null) {
+            $listenerProvider->addListener(
+                TerminateEvent::class,
+                new OrphanedConnectionListener($connectionTracker, $kernelLogger),
+            );
+        }
+
         // 6a. Câblage découplé du trio terminal (Beta 2 — Phase 4).
         // La factory ne construit plus les services à la main : elle déclare des
         // définitions dans le Container, et AbstractKernel::handle() les résout
@@ -210,7 +246,7 @@ final class AppKernelFactory
         self::registerTerminalHandlers($container, $eventDispatcher);
 
         // 7. Cache PSR-16 (RFC-013), pool de connexions + migration runner (RFC-022).
-        $cache = self::registerDataServices($container, $root, $config);
+        $cache = self::registerDataServices($container, $root, $config, $connectionTracker);
 
         // 8. Instanciation et démarrage du Router.
         $controllersPath = $config->getString(key: 'waffle.paths.controllers');
@@ -276,11 +312,12 @@ final class AppKernelFactory
         ContainerInterface $container,
         string $root,
         Config $config,
+        ?ConnectionTrackerInterface $tracker = null,
     ): CacheInterface {
-        $cache = self::buildCache($root, $config);
+        $cache = self::buildCache($root, $config, $tracker);
         $container->set(CacheInterface::class, $cache);
 
-        $connectionPool = self::buildConnectionPool($config);
+        $connectionPool = self::buildConnectionPool($config, $tracker);
         $container->set(ConnectionPoolInterface::class, $connectionPool);
         $container->set(PDOConnectionPool::class, $connectionPool);
 
@@ -454,8 +491,11 @@ final class AppKernelFactory
      *
      * Retombe sur le ArrayCache en mémoire si aucun adaptateur n'est configuré.
      */
-    public static function buildCache(string $root, Config $config): CacheInterface
-    {
+    public static function buildCache(
+        string $root,
+        Config $config,
+        ?ConnectionTrackerInterface $tracker = null,
+    ): CacheInterface {
         $adapter = $config->getString('waffle.cache.adapter') ?? CacheConstant::BACKEND_ARRAY;
         $directory = $config->getString('waffle.cache.directory') ?? 'var/cache/psr16';
         $options = [
@@ -465,7 +505,7 @@ final class AppKernelFactory
             'prefix' => $config->getString('waffle.cache.prefix'),
         ];
 
-        return new CacheFactory()->create($adapter, $options);
+        return new CacheFactory($tracker)->create($adapter, $options);
     }
 
     /**
@@ -475,8 +515,10 @@ final class AppKernelFactory
      * en mode worker FrankenPHP, les sockets restent tièdes entre les requêtes,
      * sont sondés (« ping-before-dispense ») puis reconnectés de façon transparente.
      */
-    public static function buildConnectionPool(Config $config): PDOConnectionPool
-    {
+    public static function buildConnectionPool(
+        Config $config,
+        ?ConnectionTrackerInterface $tracker = null,
+    ): PDOConnectionPool {
         $driver = $config->getString('waffle.database.driver') ?? 'mysql';
         $host = $config->getString('waffle.database.host') ?? '127.0.0.1';
         $port = $config->getString('waffle.database.port') ?? '3306';
@@ -490,6 +532,6 @@ final class AppKernelFactory
         // Fabrique sans état, rejouée à chaque création de connexion par le pool.
         return new PDOConnectionPool(factory: static fn(): PDO => new PDO($dsn, $username, $password, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        ]));
+        ]), tracker: $tracker);
     }
 }
