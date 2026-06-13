@@ -11,6 +11,8 @@ The official starting point for building robust, secure, and high-performance ap
 <a href="./LICENSE.md"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
 </p>
 
+> **Release:** `0.1.0-beta4` &nbsp;|&nbsp; PHP 8.5+ · FrankenPHP worker mode
+
 Welcome to the **Waffle Skeleton**, the official starting point for building robust, secure, and high-performance applications with the [Waffle Ecosystem](https://github.com/waffle-commons).
 
 This skeleton is not just a folder structure; it is a **Production-Grade Boilerplate** pre-configured with:
@@ -19,7 +21,7 @@ This skeleton is not just a folder structure; it is a **Production-Grade Boilerp
 
 *   **Docker Multi-Stage**: Optimized images for Development (with Xdebug) and Production (Immutable, <100MB).
 
-*   **Zero-Config Security**: Automatic secret generation and hardened defaults.
+*   **Hardened Security Defaults**: Auto-generated secrets, fail-closed CORS (SEC-04), default-on SSRF protection on outbound calls (SEC-02), stateless HMAC CSRF (SEC-01), and the Universal Authentication Bridge (RFC-021).
 
 *   **Strict Standards**: PHP 8.5+, Typed Properties, and Read-Only classes.
 
@@ -118,6 +120,7 @@ Waffle ships a native `DotEnv` parser (no third-party dependency). When you run 
 | `APP_DEBUG`          | `true` displays detailed stack traces. `false` renders JSON errors.                                                                                                                                    |
 | `APP_SECRET`         | 32-byte Hex string used for cryptographic operations.                                                                                                                                                  |
 | `WAFFLE_CSRF_SECRET` | 32+ byte signing secret for stateless HMAC CSRF tokens (Beta-1 / SEC-01). Bound at boot by `AppKernelFactory::resolveCsrfSecret()`. In `prod`, a missing or short value aborts boot; non-prod falls back to a per-process random secret. |
+| `WAFFLE_AUTH_SECRET` | 32+ byte shared HMAC-SHA256 secret for the Universal Authentication Bridge (RFC-021). Signs `X-Wfl-Assert-User` identity assertions and validates the demo HS256 JWTs. In `prod`, a missing or short value aborts boot (fail-closed). |
 | `SERVER_NAME`        | The domain name used by Caddy (e.g., `example.com` or `localhost`).                                                                                                                                    |
 | `DB_HOST` / `DB_PORT` | Database host and port consumed by `waffle.database.*` (RFC-022).                                                                                                                                     |
 | `DB_NAME`            | Database / schema name.                                                                                                                                                                                |
@@ -132,17 +135,32 @@ Waffle uses native YAML parsing (via PECL extension) for blazing-fast configurat
 ```yaml
 # Main application configuration for the Waffle Framework
 waffle:
-  # App environment (dev, prod, test). Set via server environment variable.
   env: '%env(APP_ENV)%'
-  # Debug mode. Set to false in production for security.
   debug: '%env(APP_DEBUG)%'
+  # Host-header allowlist (anti-poisoning). REQUIRED in production.
+  trusted_hosts:
+    - localhost
   security:
     level: 10
     csrf:
-      # Beta-1 / SEC-01: signing secret for the stateless HMAC CSRF subsystem.
-      # Resolved via getenv(WAFFLE_CSRF_SECRET). Production refuses to boot
-      # without a 32+ byte value.
+      # SEC-01: stateless HMAC CSRF secret. Prod refuses to boot without a 32+ byte value.
       secret: '%env(WAFFLE_CSRF_SECRET)%'
+    # SEC-04: fail-closed CORS. Empty ⇒ every cross-origin request is rejected.
+    # Add exact origins (scheme://host[:port]); never '*' with credentials.
+    cors:
+      allowed_origins: []
+    # SEC-02: the outbound HTTP client resolves → validates → pins every host,
+    # refusing private/loopback/reserved IPs. allowed_hosts whitelists trusted
+    # internal backends (exact host or CIDR) — keep it tight.
+    ssrf:
+      allowed_hosts: []
+  # Universal Authentication Bridge (RFC-021). The secret aborts boot in prod if absent.
+  auth:
+    secret: '%env(WAFFLE_AUTH_SECRET)%'
+    tenant: 'skeleton'
+    jwt:
+      issuer: 'https://waffle-dev.local'
+      audience: 'waffle-skeleton'
   paths:
     controllers: 'src/Controller'
     services: 'src/Service'
@@ -158,18 +176,24 @@ waffle:
     migrations_path: 'migrations'
 ```
 
-### Beta-1 security defaults
+> The shipped `config/app.yaml` also wires `log` (PSR-3 channel) and `cache` (PSR-16 adapter) — see the file for the full, commented set.
 
-The skeleton ships the canonical Beta-1 middleware pipeline out of the box:
+### Security defaults (Beta-4)
+
+The skeleton ships the canonical Beta-4 middleware pipeline out of the box:
 
 ```
-ErrorHandler → TrustedHost → AnonymousSession → Routing → Csrf → Security → SecureHeaders → Dispatcher
+ErrorHandler → TrustedHost → CORS → AnonymousSession → Authentication → Routing → CSRF → Security → SecureHeaders → Dispatcher
 ```
 
 This means every controller action you write is, by default, subject to:
 
 - **Fail-closed ABAC** — an action without `#[Voter]` returns HTTP `403`. Tag explicitly public actions with `#[\Waffle\Commons\Contracts\Security\Attribute\PublicAccess]`.
-- **Stateless HMAC CSRF on mutating routes** — opt actions in with `#[RequiresCsrfToken]`. Tokens are HMAC-bound to the per-browser `WAFFLE_SID` cookie issued by `AnonymousSessionMiddleware`.
+- **Stateless HMAC CSRF on mutating routes (SEC-01)** — opt actions in with `#[RequiresCsrfToken]`. Tokens are HMAC-bound to the per-browser `WAFFLE_SID` cookie issued by `AnonymousSessionMiddleware`, which rotates the SID on privilege change.
+- **Fail-closed CORS (SEC-04)** — cross-origin requests are rejected unless their origin is listed in `waffle.security.cors.allowed_origins`; wildcard-with-credentials is refused at construction.
+- **Universal Authentication (RFC-021)** — the `auth` bridge verifies inbound credentials (JWT / OAuth2-OIDC / HMAC assertion / API key / Basic) fail-closed and publishes the identity for ABAC.
+
+The outbound HTTP client is hardened too: **default-on SSRF protection (SEC-02)** resolves → validates → pins every target host and refuses private/reserved addresses, with `waffle.security.ssrf.allowed_hosts` whitelisting trusted internal backends.
 
 See the framework docs at [`waffle-commons/documentation`](https://github.com/waffle-commons/documentation) for the full design rationale.
 
