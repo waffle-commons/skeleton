@@ -32,7 +32,7 @@ final class HelloInput
     public function __construct(
         public private(set) string $name {
             set(string $value) {
-                $clean = trim($value);
+                $clean = mb_trim($value);
 
                 if ($clean === '' || preg_match('/^\p{L}+$/u', $clean) !== 1) {
                     throw new ValidationException(
