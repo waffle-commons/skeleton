@@ -11,8 +11,6 @@ services:
     # Cela permet le « hot reload » et de coder sans rebuild.
     volumes:
       - ./:/app
-      # On ignore .git pour éviter les problèmes de permissions et la charge IO inutile.
-      - /app/.git
     # Variables d'environnement de développement.
     environment:
       SERVER_NAME: localhost

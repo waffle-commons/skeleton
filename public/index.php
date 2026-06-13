@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use Waffle\Commons\Config\DotEnv;
 use Waffle\Commons\Contracts\Constant\Constant;
+use Waffle\Commons\Http\Emitter\ResponseEmitter;
+use Waffle\Commons\Http\Factory\GlobalsFactory;
 use Waffle\Commons\Runtime\WaffleRuntime;
 use App\Factory\AppKernelFactory;
 
@@ -22,10 +24,10 @@ $kernel = AppKernelFactory::create(env: $env, debug: $debug);
 
 // 2. Runtime (agnostique).
 // Le runtime orchestre simplement la boucle FrankenPHP [Kernel + Request -> Emitter].
-// STAB-01 : WaffleRuntime possède sa propre GlobalsFactory par processus ; aucun
-// passage d'état statique.
+// STAB-01 : la GlobalsFactory et l'émetteur sont des instances par processus,
+// injectées explicitement dans le runtime (aucun état statique partagé).
 $maxRequests = (int)($_SERVER['MAX_REQUESTS'] ?? 500);
-new WaffleRuntime()
+new WaffleRuntime(new GlobalsFactory(), new ResponseEmitter())
     ->loop(
         kernel: $kernel,
         maxRequests: $maxRequests
