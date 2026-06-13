@@ -44,6 +44,7 @@ use Waffle\Commons\Contracts\Handler\ArgumentResolverInterface;
 use Waffle\Commons\Contracts\Security\Csrf\Constant as CsrfConstant;
 use Waffle\Commons\Contracts\Security\Csrf\CsrfTokenManagerInterface;
 use Waffle\Commons\Contracts\Service\ReflectionServiceInterface;
+use Waffle\Commons\Contracts\Validation\ValidatorInterface;
 use Waffle\Commons\Data\Connection\PDOConnectionPool;
 use Waffle\Commons\Data\Migration\MigrationRunner;
 use Waffle\Commons\ErrorHandler\Middleware\ErrorHandlerMiddleware;
@@ -70,6 +71,7 @@ use Waffle\Commons\Security\Middleware\CorsMiddleware;
 use Waffle\Commons\Security\Middleware\CsrfMiddleware;
 use Waffle\Commons\Security\Middleware\SecurityMiddleware;
 use Waffle\Commons\Security\Security;
+use Waffle\Commons\Utils\Validation\AssertValidator;
 use Waffle\Event\Listener\OrphanedConnectionListener;
 use Waffle\Event\TerminateEvent;
 use Waffle\Handler\ControllerArgumentResolver;
@@ -288,6 +290,8 @@ final class AppKernelFactory
         EventDispatcher $eventDispatcher,
     ): void {
         $container->set(ReflectionServiceInterface::class, new ReflectionService());
+        // Validateur injectable et mockable (DX-05) : enveloppe la façade statique Assert.
+        $container->set(ValidatorInterface::class, new AssertValidator());
         $container->set(ArgumentResolverInterface::class, static function (ContainerInterface $c): ArgumentResolverInterface {
             /** @var ReflectionServiceInterface $reflection */
             $reflection = $c->get(ReflectionServiceInterface::class);
