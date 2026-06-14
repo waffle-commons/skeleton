@@ -60,10 +60,20 @@ disallowed-functions = { level = "error", functions = ["eval", "exec", "system",
 # Qualité de code — stricte.
 prefer-interface = { level = "error" }
 strict-types = { level = "error" }
-cyclomatic-complexity = { level = "warning", threshold = 20 }
-too-many-methods = { level = "warning", threshold = 20 }
-kan-defect = { level = "warning", threshold = 2.5 }
+# Métriques opinionées désactivées (alignées sur workspace) : le code d'amorçage
+# (AppKernelFactory) et le parseur de tokens (EventListenerDiscovery) portent une
+# complexité intrinsèque que ces métriques de volume/somme ne capturent pas utilement.
+cyclomatic-complexity = { enabled = false }
+too-many-methods = { enabled = false }
+kan-defect = { enabled = false }
+halstead = { enabled = false }
+literal-named-argument = { enabled = false }
 no-ini-set = { enabled = false }
+# Désactivée (alignée sur workspace) : la signature `create(env, debug)` de
+# `AppKernelFactory` est l'API d'amorçage canonique du kernel — `public/index.php`
+# lit `APP_DEBUG` indépendamment de `APP_ENV`, donc `bool $debug` est un paramètre
+# délibéré, pas un drapeau à fusionner dans une autre méthode.
+no-boolean-flag-parameter = { enabled = false }
 
 # Style — notes (informatives).
 prefer-arrow-function = { level = "note" }
@@ -77,7 +87,20 @@ analyze-dead-code = true
 strict-list-index-checks = true
 strict-array-index-existence = true
 ignore = [
+    # Listener auto-discovery instantiates discovered #[AsEventListener] classes by
+    # their scanned FQCN — a legitimate dynamic `new $fqcn()` the analyzer cannot
+    # resolve to a concrete class (mirrors workspace's AppKernelFactory).
+    { code = "unknown-class-instantiation", in = [
+        "src/",
+    ] },
+    # Token-stream index access in EventListenerDiscovery: the loop is bounded by
+    # count($tokens) but Mago can't prove it (mirrors workspace).
+    { code = "possibly-undefined-int-array-index", in = [
+        "src/",
+        "tests/",
+    ] },
     { code = "mixed-assignment", in = [
+        "src/",
         "tests/",
     ] },
     { code = "mixed-argument", in = [

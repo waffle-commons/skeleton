@@ -17,6 +17,20 @@ waffle:
       # court avorte le boot — renseignez-le dans votre manifeste de déploiement
       # avant la mise en ligne.
       secret: '%env(WAFFLE_CSRF_SECRET)%'
+    # CORS fail-closed (SEC-04) : liste blanche d'origines exactes
+    # (scheme://host[:port]). Vide par défaut ⇒ toute requête cross-origin est
+    # refusée. Ajoutez vos origines front-end pour l'ouvrir ; jamais « * » avec
+    # des cookies/identifiants (rejeté à la construction de CorsPolicy).
+    cors:
+      allowed_origins: []
+    # Protection SSRF (SEC-02) : le client HTTP sortant résout chaque hôte,
+    # épingle l'IP validée (CURLOPT_RESOLVE, anti-rebinding) et refuse toute
+    # adresse privée / loopback / réservée. `allowed_hosts` est la liste blanche
+    # d'hôtes internes de confiance (noms exacts ou CIDR, ex. « legacy-backend »
+    # ou « 10.0.0.0/8 ») exemptés du contrôle. Vide par défaut ⇒ posture stricte ;
+    # n'y placez QUE des backends que vous maîtrisez.
+    ssrf:
+      allowed_hosts: []
   # Pont d'Authentification Universel (RFC-021, paquet waffle-commons/auth).
   auth:
     # Secret partagé du pont (HMAC-SHA256) : signe les assertions d'identité

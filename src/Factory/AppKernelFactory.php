@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Factory;
 
+use App\Discovery\EventListenerDiscovery;
 use App\Kernel;
 use PDO;
 use Psr\Http\Client\ClientInterface;
@@ -37,12 +38,13 @@ use Waffle\Commons\Contracts\Constant\Constant;
 use Waffle\Commons\Contracts\Container\ContainerInterface;
 use Waffle\Commons\Contracts\Core\KernelInterface;
 use Waffle\Commons\Contracts\Data\Connection\ConnectionPoolInterface;
+use Waffle\Commons\Contracts\Data\Connection\ConnectionTrackerInterface;
 use Waffle\Commons\Contracts\Data\Migration\MigrationRunnerInterface;
-use Waffle\Commons\Contracts\EventDispatcher\EventListenerInterface;
 use Waffle\Commons\Contracts\Handler\ArgumentResolverInterface;
 use Waffle\Commons\Contracts\Security\Csrf\Constant as CsrfConstant;
 use Waffle\Commons\Contracts\Security\Csrf\CsrfTokenManagerInterface;
 use Waffle\Commons\Contracts\Service\ReflectionServiceInterface;
+use Waffle\Commons\Contracts\Validation\ValidatorInterface;
 use Waffle\Commons\Data\Connection\PDOConnectionPool;
 use Waffle\Commons\Data\Migration\MigrationRunner;
 use Waffle\Commons\ErrorHandler\Middleware\ErrorHandlerMiddleware;
@@ -52,6 +54,7 @@ use Waffle\Commons\EventDispatcher\Provider\ListenerProvider;
 use Waffle\Commons\Http\Factory\ResponseFactory;
 use Waffle\Commons\Http\Factory\StreamFactory;
 use Waffle\Commons\HttpClient\Client;
+use Waffle\Commons\HttpClient\Security\SsrfGuard;
 use Waffle\Commons\Log\Channel\LogChannel;
 use Waffle\Commons\Log\StreamLogger;
 use Waffle\Commons\Pipeline\CoreRoutingMiddleware;
@@ -59,12 +62,18 @@ use Waffle\Commons\Pipeline\Middleware\SecureHeadersMiddleware;
 use Waffle\Commons\Pipeline\Middleware\TrustedHostMiddleware;
 use Waffle\Commons\Pipeline\MiddlewareStack;
 use Waffle\Commons\Routing\Router;
+use Waffle\Commons\Runtime\Trace\ConnectionTracker;
 use Waffle\Commons\Security\Container\SecureContainer;
+use Waffle\Commons\Security\Cors\CorsPolicy;
 use Waffle\Commons\Security\Csrf\CsrfTokenManager;
 use Waffle\Commons\Security\Middleware\AnonymousSessionMiddleware;
+use Waffle\Commons\Security\Middleware\CorsMiddleware;
 use Waffle\Commons\Security\Middleware\CsrfMiddleware;
 use Waffle\Commons\Security\Middleware\SecurityMiddleware;
 use Waffle\Commons\Security\Security;
+use Waffle\Commons\Utils\Validation\AssertValidator;
+use Waffle\Event\Listener\OrphanedConnectionListener;
+use Waffle\Event\TerminateEvent;
 use Waffle\Handler\ControllerArgumentResolver;
 use Waffle\Handler\ControllerDispatcher;
 use Waffle\Service\ReflectionService;
@@ -83,8 +92,22 @@ final class AppKernelFactory
         $root = APP_ROOT;
         $rootConfig = $root . DIRECTORY_SEPARATOR . APP_CONFIG;
 
+        $isDev = $env === Constant::ENV_DEV;
+
+        // DIAG-03 (dev) : registre des connexions ouvertes à portée requête. Injecté
+        // dans les propriétaires de connexions (pool PDO, Redis, flux) et inspecté
+        // par OrphanedConnectionListener en fin de requête. Null en prod ⇒ aucun coût.
+        $connectionTracker = $isDev ? new ConnectionTracker() : null;
+
         // 1. Instanciation du Container concret (paquet waffle-commons/container).
-        $container = new Container();
+        // DIAG-02 (dev) : lock() refuse de démarrer si un service partagé garde un
+        // état mutable sans implémenter ResettableInterface (scan worker-safety).
+        $container = new Container(strictComplianceScan: $isDev);
+        // Tracer enregistré comme service partagé ⇒ vidé à chaque boucle worker par
+        // Container::reset() (ResettableInterface), jamais propagé entre requêtes.
+        if ($connectionTracker !== null) {
+            $container->set(ConnectionTrackerInterface::class, $connectionTracker);
+        }
 
         // Enregistrement de la factory PSR-17 (requise par les contrôleurs ET l'ErrorHandler).
         $responseFactory = new ResponseFactory();
@@ -93,15 +116,8 @@ final class AppKernelFactory
         }
 
         // Enregistrement de la factory PSR-17 (requise par le client HTTP).
-        $streamFactory = new StreamFactory();
+        $streamFactory = new StreamFactory($connectionTracker);
         $container->set(StreamFactoryInterface::class, $streamFactory);
-
-        // Client HTTP PSR-18 brut (paquet waffle-commons/http-client). Il n'est
-        // PAS enregistré tel quel sous ClientInterface : il sert de transport
-        // interne au décorateur AuthenticatedClient du pont d'authentification,
-        // qui est enregistré comme ClientInterface plus bas (RFC-021 §4.7) —
-        // ainsi tout consommateur hérite de la propagation d'assertion sortante.
-        $httpClient = new Client($responseFactory, $streamFactory);
 
         // 2. Construction du registre d'environnement à partir des fichiers .env
         //    et de l'environnement processus (durcissement Beta-1 : DotEnv ne mute
@@ -119,7 +135,8 @@ final class AppKernelFactory
         // STAB-01 (Beta-1) : plus de GlobalsFactory statique — WaffleRuntime construit
         // sa propre instance par processus. L'enforcement des hôtes de confiance vit
         // dans TrustedHostMiddleware (RFC-003 §3.2).
-        $trustedHosts = $config->getArray(key: 'waffle.trusted_hosts');
+        /** @var list<string> $trustedHosts */
+        $trustedHosts = $config->getArray(key: 'waffle.trusted_hosts') ?? [];
 
         // SEC-01 (Beta-1, option C) : gestionnaire CSRF sans état, basé sur un HMAC
         // lié à un SID anonyme par navigateur. Le secret vient de la config (avec
@@ -127,6 +144,19 @@ final class AppKernelFactory
         // court ⇒ avortement du boot en production.
         $csrfTokenManager = new CsrfTokenManager(secret: self::resolveCsrfSecret($config, $env));
         $container->set(CsrfTokenManagerInterface::class, $csrfTokenManager);
+
+        // Client HTTP PSR-18 brut (paquet waffle-commons/http-client). Il n'est
+        // PAS enregistré tel quel sous ClientInterface : il sert de transport
+        // interne au décorateur AuthenticatedClient du pont d'authentification,
+        // qui est enregistré comme ClientInterface plus bas (RFC-021 §4.7) —
+        // ainsi tout consommateur hérite de la propagation d'assertion sortante.
+        // Durci SEC-02 : un SsrfGuard résout et épingle chaque hôte sortant
+        // (CURLOPT_RESOLVE anti-rebinding) et refuse toute adresse privée /
+        // loopback / réservée. `waffle.security.ssrf.allowed_hosts` exempte les
+        // backends internes de confiance (noms exacts ou CIDR ; vide ⇒ strict).
+        /** @var list<string> $ssrfAllowedHosts */
+        $ssrfAllowedHosts = $config->getArray(key: 'waffle.security.ssrf.allowed_hosts') ?? [];
+        $httpClient = new Client($responseFactory, $streamFactory, new SsrfGuard(allowedHosts: $ssrfAllowedHosts));
 
         // 3-bis. Pont d'Authentification Universel (RFC-021, paquet waffle-commons/auth) :
         // schémas entrants + propagation sortante, câblés dans une fabrique dédiée.
@@ -158,9 +188,21 @@ final class AppKernelFactory
         // Authentication → Routing → Csrf → Security → SecureHeaders → Dispatcher.
         $stack->add(middleware: new TrustedHostMiddleware($trustedHosts));
 
-        // 5a-bis. SID anonyme par navigateur. Doit s'exécuter avant Csrf pour
-        // que l'attribut SID soit déjà alimenté lors du binding HMAC (SEC-01 option C).
-        $stack->add(middleware: new AnonymousSessionMiddleware());
+        // 5a-cors. CORS fail-closed (SEC-04) — doit précéder le routage pour
+        // répondre au pré-vol OPTIONS avant le court-circuit OPTIONS du routeur.
+        // Liste blanche d'origines vide par défaut ⇒ toute requête cross-origin
+        // est refusée. Renseignez `waffle.security.cors.allowed_origins` (app.yaml).
+        /** @var list<string> $corsOrigins */
+        $corsOrigins = $config->getArray(key: 'waffle.security.cors.allowed_origins') ?? [];
+        $stack->add(middleware: new CorsMiddleware(new CorsPolicy(allowedOrigins: $corsOrigins), $responseFactory));
+
+        // 5a-bis. SID anonyme par navigateur. Doit s'exécuter avant Csrf pour que
+        // l'attribut SID soit déjà alimenté lors du binding HMAC (SEC-01). Le
+        // SecurityContext est injecté pour la ROTATION du SID à l'authentification
+        // (SEC-01 fixation de session) : un SID présenté avant login est régénéré.
+        /** @var SecurityContextInterface $securityContext */
+        $securityContext = $container->get(SecurityContextInterface::class);
+        $stack->add(middleware: new AnonymousSessionMiddleware($securityContext));
 
         // 5a-ter. Pont d'Authentification Universel (RFC-021 §3.2) : authentifie
         // la requête entrante (assertion de passerelle / Bearer JWT), alimente le
@@ -176,14 +218,25 @@ final class AppKernelFactory
 
         // Auto-découverte des listeners dans le dossier EventListener.
         $eventListenersPath = $config->getString('waffle.paths.event_listeners');
-        if (is_dir($eventListenersPath)) {
-            self::discoverAndRegisterListeners($listenerProvider, $eventListenersPath);
+        if (is_string($eventListenersPath)) {
+            EventListenerDiscovery::discover($listenerProvider, $eventListenersPath);
         }
 
         // 6. Instanciation du Kernel.
         $kernelLogger = new StreamLogger(channel: LogChannel::CORE);
         $kernel = new Kernel(logger: $kernelLogger);
         $kernel->setEventDispatcher($eventDispatcher);
+
+        // DIAG-03 (dev) : alerte de fin de requête sur les connexions non libérées.
+        // Sur TerminateEvent (après émission de la réponse), le listener inspecte le
+        // tracer : un handle PDO encore emprunté ⇒ warning (fuite probable en worker) ;
+        // une connexion Redis persistante ou un flux ouvert ⇒ info (visibilité).
+        if ($connectionTracker !== null) {
+            $listenerProvider->addListener(
+                TerminateEvent::class,
+                new OrphanedConnectionListener($connectionTracker, $kernelLogger),
+            );
+        }
 
         // 6a. Câblage découplé du trio terminal (Beta 2 — Phase 4).
         // La factory ne construit plus les services à la main : elle déclare des
@@ -192,35 +245,10 @@ final class AppKernelFactory
         // Closure avec lui-même en argument, cf. container/src/Container.php).
         // Le dispatcher d'événements est capturé dans la closure pour rester
         // injecté sans dépendre d'un slot supplémentaire dans le conteneur.
-        $container->set(ReflectionServiceInterface::class, new ReflectionService());
-        $container->set(ArgumentResolverInterface::class, static function (ContainerInterface $c): ArgumentResolverInterface {
-            /** @var ReflectionServiceInterface $reflection */
-            $reflection = $c->get(ReflectionServiceInterface::class);
+        self::registerTerminalHandlers($container, $eventDispatcher);
 
-            return new ControllerArgumentResolver($c, $reflection);
-        });
-        $container->set(RequestHandlerInterface::class, static function (ContainerInterface $c) use (
-            $eventDispatcher,
-        ): RequestHandlerInterface {
-            /** @var ArgumentResolverInterface $resolver */
-            $resolver = $c->get(ArgumentResolverInterface::class);
-
-            return new ControllerDispatcher(container: $c, dispatcher: $eventDispatcher, argumentResolver: $resolver);
-        });
-
-        // 7. Instanciation du cache PSR-16 (RFC-013) et enregistrement pour les consommateurs en aval.
-        $cache = self::buildCache($root, $config);
-        $container->set(CacheInterface::class, $cache);
-
-        // 7a. Instanciation du pool de connexions (RFC-022) et enregistrement pour les consommateurs en aval.
-        $connectionPool = self::buildConnectionPool($config);
-        $container->set(ConnectionPoolInterface::class, $connectionPool);
-        $container->set(PDOConnectionPool::class, $connectionPool);
-
-        // 7b. Instanciation du migration runner (RFC-022) et enregistrement dans le conteneur.
-        $migrationRunner = new MigrationRunner(pool: $connectionPool, config: $config);
-        $container->set(MigrationRunnerInterface::class, $migrationRunner);
-        $container->set(MigrationRunner::class, $migrationRunner);
+        // 7. Cache PSR-16 (RFC-013), pool de connexions + migration runner (RFC-022).
+        $cache = self::registerDataServices($container, $root, $config, $connectionTracker);
 
         // 8. Instanciation et démarrage du Router.
         $controllersPath = $config->getString(key: 'waffle.paths.controllers');
@@ -245,24 +273,87 @@ final class AppKernelFactory
             $stack->add(middleware: new SecureHeadersMiddleware());
         }
 
-        // 9. Injection des dépendances.
+        // 9. Injection des dépendances câblées dans le kernel.
+        self::injectKernelDependencies($kernel, $config, $security, $secureContainer, $stack);
+
+        return $kernel;
+    }
+
+    /**
+     * Enregistre le trio terminal (ReflectionService + ArgumentResolver +
+     * RequestHandler) sous forme de définitions paresseuses résolues à la volée
+     * par le Container (PSR-11) ; le dispatcher d'événements est capturé dans la
+     * closure du handler.
+     */
+    private static function registerTerminalHandlers(
+        ContainerInterface $container,
+        EventDispatcher $eventDispatcher,
+    ): void {
+        $container->set(ReflectionServiceInterface::class, new ReflectionService());
+        // Validateur injectable et mockable (DX-05) : enveloppe la façade statique Assert.
+        $container->set(ValidatorInterface::class, new AssertValidator());
+        $container->set(ArgumentResolverInterface::class, static function (ContainerInterface $c): ArgumentResolverInterface {
+            /** @var ReflectionServiceInterface $reflection */
+            $reflection = $c->get(ReflectionServiceInterface::class);
+
+            return new ControllerArgumentResolver($c, $reflection);
+        });
+        $container->set(RequestHandlerInterface::class, static function (ContainerInterface $c) use (
+            $eventDispatcher,
+        ): RequestHandlerInterface {
+            /** @var ArgumentResolverInterface $resolver */
+            $resolver = $c->get(ArgumentResolverInterface::class);
+
+            return new ControllerDispatcher(container: $c, dispatcher: $eventDispatcher, argumentResolver: $resolver);
+        });
+    }
+
+    /**
+     * Enregistre le cache PSR-16, le pool de connexions et le migration runner ;
+     * retourne le cache (réutilisé par le routeur).
+     */
+    private static function registerDataServices(
+        ContainerInterface $container,
+        string $root,
+        Config $config,
+        ?ConnectionTrackerInterface $tracker = null,
+    ): CacheInterface {
+        $cache = self::buildCache($root, $config, $tracker);
+        $container->set(CacheInterface::class, $cache);
+
+        $connectionPool = self::buildConnectionPool($config, $tracker);
+        $container->set(ConnectionPoolInterface::class, $connectionPool);
+        $container->set(PDOConnectionPool::class, $connectionPool);
+
+        $migrationRunner = new MigrationRunner(pool: $connectionPool, config: $config);
+        $container->set(MigrationRunnerInterface::class, $migrationRunner);
+        $container->set(MigrationRunner::class, $migrationRunner);
+
+        return $cache;
+    }
+
+    /**
+     * Injecte de façon défensive les dépendances câblées dans le kernel.
+     */
+    private static function injectKernelDependencies(
+        KernelInterface $kernel,
+        Config $config,
+        Security $security,
+        SecureContainer $secureContainer,
+        MiddlewareStack $stack,
+    ): void {
         if (method_exists($kernel, 'setConfiguration')) {
             $kernel->setConfiguration($config);
         }
-
         if (method_exists($kernel, 'setSecurity')) {
             $kernel->setSecurity($security);
         }
-
         if (method_exists($kernel, 'setContainerImplementation')) {
             $kernel->setContainerImplementation($secureContainer);
         }
-
         if (method_exists($kernel, 'setMiddlewareStack')) {
             $kernel->setMiddlewareStack($stack);
         }
-
-        return $kernel;
     }
 
     /**
@@ -348,11 +439,13 @@ final class AppKernelFactory
         ]);
         $container->set(AuthenticationBridgeInterface::class, $authBridge);
 
+        /** @var list<string> $assertHosts */
+        $assertHosts = $config->getArray(key: 'waffle.auth.assert_hosts') ?? [];
         $container->set(ClientInterface::class, new AuthenticatedClient($httpClient, [
             new AssertionCredentialsProvider(
                 signer: $assertionSigner,
                 context: $securityContext,
-                allowedHosts: $config->getArray(key: 'waffle.auth.assert_hosts'),
+                allowedHosts: $assertHosts,
                 tenant: $config->getString('waffle.auth.tenant'),
             ),
         ]));
@@ -402,8 +495,11 @@ final class AppKernelFactory
      *
      * Retombe sur le ArrayCache en mémoire si aucun adaptateur n'est configuré.
      */
-    public static function buildCache(string $root, Config $config): CacheInterface
-    {
+    public static function buildCache(
+        string $root,
+        Config $config,
+        ?ConnectionTrackerInterface $tracker = null,
+    ): CacheInterface {
         $adapter = $config->getString('waffle.cache.adapter') ?? CacheConstant::BACKEND_ARRAY;
         $directory = $config->getString('waffle.cache.directory') ?? 'var/cache/psr16';
         $options = [
@@ -413,7 +509,7 @@ final class AppKernelFactory
             'prefix' => $config->getString('waffle.cache.prefix'),
         ];
 
-        return new CacheFactory()->create($adapter, $options);
+        return new CacheFactory($tracker)->create($adapter, $options);
     }
 
     /**
@@ -423,8 +519,10 @@ final class AppKernelFactory
      * en mode worker FrankenPHP, les sockets restent tièdes entre les requêtes,
      * sont sondés (« ping-before-dispense ») puis reconnectés de façon transparente.
      */
-    public static function buildConnectionPool(Config $config): PDOConnectionPool
-    {
+    public static function buildConnectionPool(
+        Config $config,
+        ?ConnectionTrackerInterface $tracker = null,
+    ): PDOConnectionPool {
         $driver = $config->getString('waffle.database.driver') ?? 'mysql';
         $host = $config->getString('waffle.database.host') ?? '127.0.0.1';
         $port = $config->getString('waffle.database.port') ?? '3306';
@@ -438,103 +536,6 @@ final class AppKernelFactory
         // Fabrique sans état, rejouée à chaque création de connexion par le pool.
         return new PDOConnectionPool(factory: static fn(): PDO => new PDO($dsn, $username, $password, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        ]));
-    }
-
-    /**
-     * Auto-découvre et enregistre les listeners d'événements depuis un dossier.
-     * Scanne les classes implémentant EventListenerInterface portant l'attribut
-     * #[AsEventListener].
-     */
-    private static function discoverAndRegisterListeners(ListenerProvider $provider, string $directory): void
-    {
-        if (!is_dir($directory)) {
-            return;
-        }
-
-        $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(
-            $directory,
-            \RecursiveDirectoryIterator::SKIP_DOTS,
-        ));
-
-        foreach ($iterator as $file) {
-            if (!$file->isFile() || $file->getExtension() !== 'php') {
-                continue;
-            }
-
-            $content = file_get_contents($file->getPathname());
-            if ($content === false) {
-                continue;
-            }
-
-            // Vérification rapide : le fichier contient-il l'attribut AsEventListener ?
-            if (!str_contains($content, 'AsEventListener')) {
-                continue;
-            }
-
-            // Extraction du FQCN via token_get_all (même approche que ReflectionTrait).
-            $fqcn = self::extractClassName($file->getPathname());
-            if ($fqcn === '' || !class_exists($fqcn)) {
-                continue;
-            }
-
-            $instance = new $fqcn();
-
-            if ($instance instanceof EventListenerInterface) {
-                $provider->register($instance);
-            }
-        }
-    }
-
-    /**
-     * Extrait le nom de classe pleinement qualifié d'un fichier PHP via
-     * token_get_all.
-     */
-    private static function extractClassName(string $path): string
-    {
-        $contents = file_get_contents($path);
-        if ($contents === false) {
-            return '';
-        }
-
-        $tokens = token_get_all($contents);
-        $namespace = '';
-        $class = '';
-        $count = count($tokens);
-
-        for ($i = 0; $i < $count; $i++) {
-            $token = $tokens[$i];
-
-            if (is_array($token) && $token[0] === T_NAMESPACE) {
-                while (++$i < $count) {
-                    if ($tokens[$i] === ';' || $tokens[$i] === '{') {
-                        break;
-                    }
-                    if (is_array($tokens[$i])) {
-                        $namespace .= $tokens[$i][1];
-                    }
-                }
-                continue;
-            }
-
-            if (is_array($token) && in_array($token[0], [T_CLASS, T_INTERFACE, T_TRAIT, T_ENUM], true)) {
-                $j = $i;
-                while (++$j < $count) {
-                    if (is_array($tokens[$j]) && $tokens[$j][0] === T_STRING) {
-                        $class = $tokens[$j][1];
-                        break 2;
-                    }
-                    if ($tokens[$j] === '{') {
-                        break;
-                    }
-                }
-            }
-        }
-
-        if ($class === '') {
-            return '';
-        }
-
-        return $namespace ? $namespace . '\\' . $class : $class;
+        ]), tracker: $tracker);
     }
 }
