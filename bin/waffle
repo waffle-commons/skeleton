@@ -34,6 +34,7 @@ use Waffle\Commons\Data\Warmup\QueryWarmer;
 use Waffle\Commons\Routing\Router;
 use Waffle\Commons\Contracts\Data\Connection\ConnectionPoolInterface;
 use Waffle\Commons\Contracts\Data\Migration\MigrationRunnerInterface;
+use Waffle\Commons\Auth\SecurityContext;
 use Waffle\Commons\Security\Container\SecureContainer;
 use Waffle\Commons\Security\Security;
 
@@ -47,7 +48,9 @@ $rootConfig = $root . DIRECTORY_SEPARATOR . 'config';
 $container = new Container();
 $config = new Config(configDir: $rootConfig, environment: Constant::ENV_DEV);
 $security = new Security($config);
-$secureContainer = new SecureContainer($container, $security);
+// AUTHZ-01 : la CLI n'authentifie personne ; un SecurityContext vierge satisfait
+// le SecureContainer (les voters #[Voter] ne s'exécutent pas hors requête HTTP).
+$secureContainer = new SecureContainer($container, $security, new SecurityContext());
 $cache = AppKernelFactory::buildCache($root, $config);
 $router = new Router(directory: $config->getString(key: 'waffle.paths.controllers'));
 

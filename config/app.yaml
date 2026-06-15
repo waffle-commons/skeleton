@@ -10,6 +10,11 @@ waffle:
   trusted_hosts:
     - localhost
   security:
+    # Niveau de durcissement de l'INTÉGRITÉ DES OBJETS résolus (échelle cumulative
+    # Level1 → Level10, RFC-002), appliquée par le SecureContainer à chaque service
+    # qu'il instancie. Couche DISTINCTE du contrôle d'accès aux routes, lequel est
+    # porté par les attributs #[Voter] (ABAC fail-closed, AUTHZ-01) — il n'y a pas
+    # d'attribut #[Rule]. 10 = toutes les règles cumulées (le plus strict).
     level: 10
     csrf:
       # Secret de signature de 32 octets ou plus pour les jetons CSRF HMAC sans état (Beta-1 / SEC-01).

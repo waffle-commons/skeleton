@@ -165,8 +165,12 @@ final class AppKernelFactory
         // 3. Instanciation de Security (paquet waffle-commons/security).
         $security = new Security($config);
 
-        // 4. Décoration du container par le SecureContainer.
-        $secureContainer = new SecureContainer($container, $security);
+        // 4. Décoration du container par le SecureContainer. Le SecurityContext
+        // (alimenté par le pont d'authentification ci-dessus) est injecté pour que
+        // les voters #[Voter] reçoivent l'identité authentifiée (AUTHZ-01).
+        /** @var SecurityContextInterface $securityContext */
+        $securityContext = $container->get(SecurityContextInterface::class);
+        $secureContainer = new SecureContainer($container, $security, $securityContext);
 
         // 5. Instanciation des middlewares du pipeline.
         $stack = new MiddlewareStack();
@@ -200,8 +204,7 @@ final class AppKernelFactory
         // l'attribut SID soit déjà alimenté lors du binding HMAC (SEC-01). Le
         // SecurityContext est injecté pour la ROTATION du SID à l'authentification
         // (SEC-01 fixation de session) : un SID présenté avant login est régénéré.
-        /** @var SecurityContextInterface $securityContext */
-        $securityContext = $container->get(SecurityContextInterface::class);
+        // ($securityContext est déjà résolu plus haut pour le SecureContainer.)
         $stack->add(middleware: new AnonymousSessionMiddleware($securityContext));
 
         // 5a-ter. Pont d'Authentification Universel (RFC-021 §3.2) : authentifie
@@ -222,10 +225,9 @@ final class AppKernelFactory
             EventListenerDiscovery::discover($listenerProvider, $eventListenersPath);
         }
 
-        // 6. Instanciation du Kernel.
+        // 6. Logger du kernel. Le kernel lui-même est construit plus bas (étape 9),
+        //    une fois tous ses collaborateurs prêts — injection par constructeur (ARCH-03).
         $kernelLogger = new StreamLogger(channel: LogChannel::CORE);
-        $kernel = new Kernel(logger: $kernelLogger);
-        $kernel->setEventDispatcher($eventDispatcher);
 
         // DIAG-03 (dev) : alerte de fin de requête sur les connexions non libérées.
         // Sur TerminateEvent (après émission de la réponse), le listener inspecte le
@@ -273,8 +275,19 @@ final class AppKernelFactory
             $stack->add(middleware: new SecureHeadersMiddleware());
         }
 
-        // 9. Injection des dépendances câblées dans le kernel.
-        self::injectKernelDependencies($kernel, $config, $security, $secureContainer, $stack);
+        // 9. Construction du Kernel par injection de constructeur (ARCH-03) : tous les
+        //    collaborateurs requis sont prêts (config, conteneur sécurisé, sécurité,
+        //    pile de middlewares, dispatcher) — plus de setters ni d'objet à moitié construit.
+        $kernel = new Kernel(
+            config: $config,
+            container: $secureContainer,
+            security: $security,
+            middlewareStack: $stack,
+            logger: $kernelLogger,
+        );
+        // L'event dispatcher est le SEUL collaborateur optionnel (les hooks de cycle
+        // de vie sont inertes sans lui) — câblé via le setter dédié au boot (ARCH-03).
+        $kernel->setEventDispatcher($eventDispatcher);
 
         return $kernel;
     }
@@ -330,30 +343,6 @@ final class AppKernelFactory
         $container->set(MigrationRunner::class, $migrationRunner);
 
         return $cache;
-    }
-
-    /**
-     * Injecte de façon défensive les dépendances câblées dans le kernel.
-     */
-    private static function injectKernelDependencies(
-        KernelInterface $kernel,
-        Config $config,
-        Security $security,
-        SecureContainer $secureContainer,
-        MiddlewareStack $stack,
-    ): void {
-        if (method_exists($kernel, 'setConfiguration')) {
-            $kernel->setConfiguration($config);
-        }
-        if (method_exists($kernel, 'setSecurity')) {
-            $kernel->setSecurity($security);
-        }
-        if (method_exists($kernel, 'setContainerImplementation')) {
-            $kernel->setContainerImplementation($secureContainer);
-        }
-        if (method_exists($kernel, 'setMiddlewareStack')) {
-            $kernel->setMiddlewareStack($stack);
-        }
     }
 
     /**
