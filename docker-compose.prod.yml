@@ -7,6 +7,7 @@ services:
       dockerfile: ./docker/Dockerfile
       target: prod
     image: waffle-app:prod
+    container_name: waffle-app-prod
     # CRITIQUE : pas de volumes en production !
     # Le code est immuable et figé dans l'image.
     volumes: []
