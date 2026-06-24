@@ -17,8 +17,10 @@ declare(strict_types=1);
 use App\Factory\AppKernelFactory;
 use Waffle\Commons\Config\Config;
 use Waffle\Commons\Console\Command\CacheClearCommand;
+use Waffle\Commons\Console\Command\ContainerCompileCommand;
 use Waffle\Commons\Console\Command\DataWarmupCommand;
 use Waffle\Commons\Console\Command\MigrateCommand;
+use Waffle\Commons\Console\Command\RouteCompileCommand;
 use Waffle\Commons\Console\Command\RouteListCommand;
 use Waffle\Commons\Console\Command\SecurityAuditCommand;
 use Waffle\Commons\Console\ConsoleApplication;
@@ -96,5 +98,16 @@ $app->add(command: new DataWarmupCommand(warmers: [
         cacheFile: $root . '/var/cache/data-warmup.php',
     ),
 ]));
+
+// AXE1 / AOT (RFC-019) : pré-compilation au build.
+//   - `waffle container:compile` lit le graphe de services du conteneur amorcé et
+//     émet une classe CompiledContainer sans réflexion (var/cache/CompiledContainer.php).
+//   - `waffle route:compile` sérialise la table de routage découverte
+//     (var/cache/routes.trie.php) pour éviter la découverte d'attributs à chaud.
+// Au boot, posez WAFFLE_AOT=1 : AbstractKernel::configure() charge l'artefact
+// compilé sur le chemin rapide ; tout raté retombe proprement sur la réflexion
+// (repli obligatoire RFC-019), donc le défaut dev reste inchangé.
+$app->add(command: new ContainerCompileCommand(container: $container));
+$app->add(command: new RouteCompileCommand(router: $router->boot(container: $secureContainer)));
 
 exit($app->run());

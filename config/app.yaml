@@ -50,6 +50,15 @@ waffle:
       # Émetteur et audience attendus des jetons Bearer de la démo (HS256).
       issuer: 'https://waffle-dev.local'
       audience: 'waffle-skeleton'
+    # WebAuthn / passkeys (AXE6 / AUTH-01). Le `rp_id` DOIT être un domaine
+    # effectif (jamais une origine avec schéma) ; `allowed_origins` liste les
+    # origines clientes acceptées (schéma://hôte[:port]). Adaptez à votre domaine
+    # de déploiement avant la mise en ligne.
+    webauthn:
+      rp_id: 'localhost'
+      rp_name: 'Waffle Skeleton'
+      allowed_origins:
+        - 'https://localhost'
     # Hôtes autorisés à recevoir l'assertion sortante X-Wfl-Assert-User via le
     # client HTTP décoré (RFC-021 §4.7). Vide ⇒ aucune propagation sortante.
     assert_hosts: []
