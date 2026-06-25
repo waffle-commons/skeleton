@@ -65,6 +65,10 @@
             "@linter",
             "@analyzer"
         ],
+        "phpunit": "vendor/bin/phpunit",
+        "tests": [
+            "@phpunit"
+        ],
         "igor": "vendor/bin/igor-php .",
         "post-create-project-cmd": [
             "Scripts\\Setup::postCreateProject"
