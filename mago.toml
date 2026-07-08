@@ -63,7 +63,7 @@ strict-types = { level = "error" }
 # Métriques opinionées désactivées (alignées sur workspace) : le code d'amorçage
 # (AppKernelFactory) et le parseur de tokens (EventListenerDiscovery) portent une
 # complexité intrinsèque que ces métriques de volume/somme ne capturent pas utilement.
-cyclomatic-complexity = { enabled = false }
+cyclomatic-complexity = { enabled = true, threshold = 50 }
 too-many-methods = { enabled = false }
 kan-defect = { enabled = false }
 halstead = { enabled = false }

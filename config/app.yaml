@@ -10,6 +10,11 @@ waffle:
   trusted_hosts:
     - localhost
   security:
+    # Niveau de durcissement de l'INTÉGRITÉ DES OBJETS résolus (échelle cumulative
+    # Level1 → Level10, RFC-002), appliquée par le SecureContainer à chaque service
+    # qu'il instancie. Couche DISTINCTE du contrôle d'accès aux routes, lequel est
+    # porté par les attributs #[Voter] (ABAC fail-closed, AUTHZ-01) — il n'y a pas
+    # d'attribut #[Rule]. 10 = toutes les règles cumulées (le plus strict).
     level: 10
     csrf:
       # Secret de signature de 32 octets ou plus pour les jetons CSRF HMAC sans état (Beta-1 / SEC-01).
@@ -45,6 +50,15 @@ waffle:
       # Émetteur et audience attendus des jetons Bearer de la démo (HS256).
       issuer: 'https://waffle-dev.local'
       audience: 'waffle-skeleton'
+    # WebAuthn / passkeys (AXE6 / AUTH-01). Le `rp_id` DOIT être un domaine
+    # effectif (jamais une origine avec schéma) ; `allowed_origins` liste les
+    # origines clientes acceptées (schéma://hôte[:port]). Adaptez à votre domaine
+    # de déploiement avant la mise en ligne.
+    webauthn:
+      rp_id: 'localhost'
+      rp_name: 'Waffle Skeleton'
+      allowed_origins:
+        - 'https://localhost'
     # Hôtes autorisés à recevoir l'assertion sortante X-Wfl-Assert-User via le
     # client HTTP décoré (RFC-021 §4.7). Vide ⇒ aucune propagation sortante.
     assert_hosts: []

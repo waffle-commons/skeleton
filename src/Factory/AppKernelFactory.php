@@ -6,12 +6,17 @@ namespace App\Factory;
 
 use App\Discovery\EventListenerDiscovery;
 use App\Kernel;
+use App\Security\WebAuthn\InMemoryChallengeStore;
+use App\Security\WebAuthn\InMemoryCredentialRepository;
 use PDO;
 use Psr\Http\Client\ClientInterface;
+use Psr\Http\Message\RequestFactoryInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Psr\Log\LoggerInterface;
 use RuntimeException;
+use Waffle\Commons\Async\DeferredTaskRunner;
 use Waffle\Commons\Auth\AuthenticationBridge;
 use Waffle\Commons\Auth\Authenticator\AssertionAuthenticator;
 use Waffle\Commons\Auth\Authenticator\JwtAuthenticator;
@@ -24,13 +29,18 @@ use Waffle\Commons\Auth\Middleware\AuthenticationMiddleware;
 use Waffle\Commons\Auth\SecurityContext;
 use Waffle\Commons\Auth\Uab\AuthBridgeSigner;
 use Waffle\Commons\Auth\Uab\AuthBridgeVerifier;
+use Waffle\Commons\Auth\WebAuthn\WebAuthnAuthenticator;
+use Waffle\Commons\Auth\WebAuthn\WebAuthnCeremony;
+use Waffle\Commons\Auth\WebAuthn\WebAuthnLibAdapter;
 use Waffle\Commons\Cache\Factory\CacheFactory;
 use Waffle\Commons\Config\Config;
 use Waffle\Commons\Config\DotEnv;
 use Waffle\Commons\Container\Container;
+use Waffle\Commons\Contracts\Async\TaskRunnerInterface;
 use Waffle\Commons\Contracts\Auth\AuthenticationBridgeInterface;
 use Waffle\Commons\Contracts\Auth\Constant as AuthConstant;
 use Waffle\Commons\Contracts\Auth\SecurityContextInterface;
+use Waffle\Commons\Contracts\Auth\WebAuthn\CredentialRepositoryInterface;
 use Waffle\Commons\Contracts\Cache\CacheInterface;
 use Waffle\Commons\Contracts\Cache\Constant as CacheConstant;
 use Waffle\Commons\Contracts\Config\ConfigInterface;
@@ -39,18 +49,29 @@ use Waffle\Commons\Contracts\Container\ContainerInterface;
 use Waffle\Commons\Contracts\Core\KernelInterface;
 use Waffle\Commons\Contracts\Data\Connection\ConnectionPoolInterface;
 use Waffle\Commons\Contracts\Data\Connection\ConnectionTrackerInterface;
+use Waffle\Commons\Contracts\Data\Connection\RelationalConnectionPoolInterface;
 use Waffle\Commons\Contracts\Data\Migration\MigrationRunnerInterface;
 use Waffle\Commons\Contracts\Handler\ArgumentResolverInterface;
+use Waffle\Commons\Contracts\HttpClient\ConcurrentClientInterface;
+use Waffle\Commons\Contracts\Reactive\BroadcastBufferInterface;
 use Waffle\Commons\Contracts\Security\Csrf\Constant as CsrfConstant;
 use Waffle\Commons\Contracts\Security\Csrf\CsrfTokenManagerInterface;
 use Waffle\Commons\Contracts\Service\ReflectionServiceInterface;
+use Waffle\Commons\Contracts\Telemetry\Metrics\MetricsCollectorInterface;
+use Waffle\Commons\Contracts\Telemetry\Metrics\MetricsRegistryInterface;
+use Waffle\Commons\Contracts\Telemetry\Metrics\NullMetricsRegistry;
+use Waffle\Commons\Contracts\Telemetry\NullTextMapPropagator;
+use Waffle\Commons\Contracts\Telemetry\NullTracer;
+use Waffle\Commons\Contracts\Telemetry\TracerInterface;
 use Waffle\Commons\Contracts\Validation\ValidatorInterface;
 use Waffle\Commons\Data\Connection\PDOConnectionPool;
+use Waffle\Commons\Data\Middleware\TransactionIsolationMiddleware;
 use Waffle\Commons\Data\Migration\MigrationRunner;
 use Waffle\Commons\ErrorHandler\Middleware\ErrorHandlerMiddleware;
 use Waffle\Commons\ErrorHandler\Renderer\JsonErrorRenderer;
 use Waffle\Commons\EventDispatcher\Dispatcher\EventDispatcher;
 use Waffle\Commons\EventDispatcher\Provider\ListenerProvider;
+use Waffle\Commons\Http\Factory\RequestFactory;
 use Waffle\Commons\Http\Factory\ResponseFactory;
 use Waffle\Commons\Http\Factory\StreamFactory;
 use Waffle\Commons\HttpClient\Client;
@@ -71,11 +92,24 @@ use Waffle\Commons\Security\Middleware\CorsMiddleware;
 use Waffle\Commons\Security\Middleware\CsrfMiddleware;
 use Waffle\Commons\Security\Middleware\SecurityMiddleware;
 use Waffle\Commons\Security\Security;
+use Waffle\Commons\Telemetry\Cache\MeteredCache;
+use Waffle\Commons\Telemetry\Collector\GcCollector;
+use Waffle\Commons\Telemetry\Collector\MemoryCollector;
+use Waffle\Commons\Telemetry\Collector\PoolUtilizationCollector;
+use Waffle\Commons\Telemetry\Exporter\PrometheusExporter;
+use Waffle\Commons\Telemetry\Metric\ApcuMetricStore;
+use Waffle\Commons\Telemetry\Metric\MetricsRegistry;
+use Waffle\Commons\Telemetry\Middleware\MetricsMiddleware;
+use Waffle\Commons\Telemetry\Middleware\TracingMiddleware;
 use Waffle\Commons\Utils\Validation\AssertValidator;
+use Waffle\Event\Listener\BroadcastFlushListener;
+use Waffle\Event\Listener\DeferredTaskFlushListener;
 use Waffle\Event\Listener\OrphanedConnectionListener;
 use Waffle\Event\TerminateEvent;
 use Waffle\Handler\ControllerArgumentResolver;
 use Waffle\Handler\ControllerDispatcher;
+use Waffle\Reactive\RequestBroadcastBuffer;
+use Waffle\Reactive\Sse\SseBroadcastTransport;
 use Waffle\Service\ReflectionService;
 
 /**
@@ -119,6 +153,18 @@ final class AppKernelFactory
         $streamFactory = new StreamFactory($connectionTracker);
         $container->set(StreamFactoryInterface::class, $streamFactory);
 
+        // Traçage distribué (AXE 5 / OBS-01) : NullTracer + propagateur W3C no-op par
+        // défaut (surcoût ~0, aucun en-tête de trace émis). Le pont OpenTelemetry
+        // (paquet waffle-commons/telemetry-otel) est OPT-IN : ajoutez-le en dépendance
+        // puis remplacez ces no-op par OtelTracerFactory::console(...) + un
+        // W3CTraceContextPropagator (cf. l'app workspace pour le câblage complet,
+        // amont → aval, et la démo de propagation `traceparent` inter-services).
+        // Enregistré comme service partagé : injecté dans les contrôleurs ET réutilisé
+        // par le client HTTP + le TracingMiddleware (une seule trace de bout en bout).
+        $tracer = new NullTracer();
+        $tracePropagator = new NullTextMapPropagator();
+        $container->set(TracerInterface::class, $tracer);
+
         // 2. Construction du registre d'environnement à partir des fichiers .env
         //    et de l'environnement processus (durcissement Beta-1 : DotEnv ne mute
         //    plus l'environnement PHP global ; on le fusionne ici avec l'env vivant
@@ -156,7 +202,22 @@ final class AppKernelFactory
         // backends internes de confiance (noms exacts ou CIDR ; vide ⇒ strict).
         /** @var list<string> $ssrfAllowedHosts */
         $ssrfAllowedHosts = $config->getArray(key: 'waffle.security.ssrf.allowed_hosts') ?? [];
-        $httpClient = new Client($responseFactory, $streamFactory, new SsrfGuard(allowedHosts: $ssrfAllowedHosts));
+        // Le traceur + le propagateur W3C sont passés au client : chaque requête
+        // sortante porte alors le `traceparent` de la trace active (no-op par défaut ;
+        // actif dès que le pont OTel est branché). SEC-02 SSRF reste en amont.
+        $httpClient = new Client(
+            $responseFactory,
+            $streamFactory,
+            new SsrfGuard(allowedHosts: $ssrfAllowedHosts),
+            $tracer,
+            $tracePropagator,
+        );
+        // ASYNC-02 : le même client implémente ConcurrentClientInterface (fan-out
+        // sortant en parallèle). Exposé sous le contrat de concurrence pour que les
+        // consommateurs (ConcurrentDemoController) en dépendent sans le concret ;
+        // une RequestFactory PSR-17 est fournie pour construire le lot de requêtes.
+        $container->set(ConcurrentClientInterface::class, $httpClient);
+        $container->set(RequestFactoryInterface::class, new RequestFactory());
 
         // 3-bis. Pont d'Authentification Universel (RFC-021, paquet waffle-commons/auth) :
         // schémas entrants + propagation sortante, câblés dans une fabrique dédiée.
@@ -165,8 +226,12 @@ final class AppKernelFactory
         // 3. Instanciation de Security (paquet waffle-commons/security).
         $security = new Security($config);
 
-        // 4. Décoration du container par le SecureContainer.
-        $secureContainer = new SecureContainer($container, $security);
+        // 4. Décoration du container par le SecureContainer. Le SecurityContext
+        // (alimenté par le pont d'authentification ci-dessus) est injecté pour que
+        // les voters #[Voter] reçoivent l'identité authentifiée (AUTHZ-01).
+        /** @var SecurityContextInterface $securityContext */
+        $securityContext = $container->get(SecurityContextInterface::class);
+        $secureContainer = new SecureContainer($container, $security, $securityContext);
 
         // 5. Instanciation des middlewares du pipeline.
         $stack = new MiddlewareStack();
@@ -179,6 +244,33 @@ final class AppKernelFactory
         $errorHandler = new ErrorHandlerMiddleware(renderer: $errorRenderer, logger: $errorLogger);
 
         $stack->prepend(middleware: $errorHandler);
+
+        // 5t. Télémétrie (AXE 5 / OBS-02) — endpoint /waffle-metrics + métriques de
+        //     requête. Compteurs en mémoire partagée APCu (jamais sur le tas worker) ;
+        //     repli no-op (NullMetricsRegistry) sans APCu. Placé tôt : /waffle-metrics
+        //     court-circuite avant le pipeline applicatif et applique sa propre sécurité
+        //     fail-closed — localhost (127.0.0.1 / ::1) uniquement par défaut ; passez un
+        //     bearer token au MetricsMiddleware pour autoriser un scrape distant. Le
+        //     TracingMiddleware ouvre le span serveur racine (extraction du `traceparent`
+        //     entrant) et compte requêtes + durées (no-op tant que le tracer est le NullTracer).
+        $metricsRegistry = apcu_enabled() ? new MetricsRegistry(new ApcuMetricStore()) : new NullMetricsRegistry();
+        $container->set(MetricsRegistryInterface::class, $metricsRegistry);
+
+        $collectors = [new MemoryCollector(), new GcCollector(), new PoolUtilizationCollector()];
+        if ($metricsRegistry instanceof MetricsCollectorInterface) {
+            $collectors[] = $metricsRegistry;
+        }
+
+        $stack->add(
+            middleware: new MetricsMiddleware(
+                new PrometheusExporter($collectors),
+                $responseFactory,
+                $streamFactory,
+                null,
+                ['127.0.0.1', '::1'],
+            ),
+        );
+        $stack->add(middleware: new TracingMiddleware($tracer, $metricsRegistry, $tracePropagator));
 
         // 5a. Allow-list des hôtes — première barrière exécutable du pipeline,
         // alimentée par `waffle.trusted_hosts` (app.yaml). L'ErrorHandler reste
@@ -200,8 +292,7 @@ final class AppKernelFactory
         // l'attribut SID soit déjà alimenté lors du binding HMAC (SEC-01). Le
         // SecurityContext est injecté pour la ROTATION du SID à l'authentification
         // (SEC-01 fixation de session) : un SID présenté avant login est régénéré.
-        /** @var SecurityContextInterface $securityContext */
-        $securityContext = $container->get(SecurityContextInterface::class);
+        // ($securityContext est déjà résolu plus haut pour le SecureContainer.)
         $stack->add(middleware: new AnonymousSessionMiddleware($securityContext));
 
         // 5a-ter. Pont d'Authentification Universel (RFC-021 §3.2) : authentifie
@@ -222,10 +313,17 @@ final class AppKernelFactory
             EventListenerDiscovery::discover($listenerProvider, $eventListenersPath);
         }
 
-        // 6. Instanciation du Kernel.
+        // 6. Logger du kernel. Le kernel lui-même est construit plus bas (étape 9),
+        //    une fois tous ses collaborateurs prêts — injection par constructeur (ARCH-03).
         $kernelLogger = new StreamLogger(channel: LogChannel::CORE);
-        $kernel = new Kernel(logger: $kernelLogger);
-        $kernel->setEventDispatcher($eventDispatcher);
+
+        // 6-reactive (REACTIVE-01) + 6-async (ASYNC-01) : services et flushs
+        // finish-request des axes temps réel et déferralisation, enregistrés AVANT
+        // le diagnostic de connexions pour que les flushs sensibles à la latence
+        // s'exécutent en premier. Les deux services sont les SEULS porteurs d'état
+        // à portée requête de ces axes : enregistrés dans le conteneur, ils sont
+        // vidés par Container::reset() à chaque boucle worker (ResettableInterface).
+        self::registerReactiveServices($container, $listenerProvider, $kernelLogger);
 
         // DIAG-03 (dev) : alerte de fin de requête sur les connexions non libérées.
         // Sur TerminateEvent (après émission de la réponse), le listener inspecte le
@@ -250,6 +348,13 @@ final class AppKernelFactory
         // 7. Cache PSR-16 (RFC-013), pool de connexions + migration runner (RFC-022).
         $cache = self::registerDataServices($container, $root, $config, $connectionTracker);
 
+        // 7b. AXE 5 / OBS-02 : décorateur cache-hit-ratio — enveloppe le cache partagé
+        //     pour alimenter `waffle_cache_hits_total` / `_misses_total` dans le registre
+        //     APCu (jamais sur le tas worker), exposés via /waffle-metrics. Réenregistré
+        //     dans le conteneur : Router et tout consommateur reçoivent la version mesurée.
+        $cache = new MeteredCache($cache, $metricsRegistry);
+        $container->set(CacheInterface::class, $cache);
+
         // 8. Instanciation et démarrage du Router.
         $controllersPath = $config->getString(key: 'waffle.paths.controllers');
         if (is_string($controllersPath)) {
@@ -269,12 +374,33 @@ final class AppKernelFactory
             $stack->add(middleware: new CsrfMiddleware($csrfTokenManager));
             $stack->add(middleware: $secureMiddleware);
 
+            // DBAL-02 : isolation transactionnelle failsafe. APRÈS Security, AVANT
+            // le dispatcher terminal : chaque requête d'écriture (POST/PUT/PATCH/
+            // DELETE) est enveloppée dans UNE transaction sur une connexion épinglée
+            // (affinité DBAL-01) ; commit au retour normal, rollback sur toute
+            // exception non rattrapée — aucune écriture demi-appliquée ni verrou
+            // fuité d'une itération worker à la suivante.
+            /** @var RelationalConnectionPoolInterface $pool */
+            $pool = $container->get(RelationalConnectionPoolInterface::class);
+            $stack->add(middleware: new TransactionIsolationMiddleware($pool));
+
             // Middleware d'en-têtes sécurisés.
             $stack->add(middleware: new SecureHeadersMiddleware());
         }
 
-        // 9. Injection des dépendances câblées dans le kernel.
-        self::injectKernelDependencies($kernel, $config, $security, $secureContainer, $stack);
+        // 9. Construction du Kernel par injection de constructeur (ARCH-03) : tous les
+        //    collaborateurs requis sont prêts (config, conteneur sécurisé, sécurité,
+        //    pile de middlewares, dispatcher) — plus de setters ni d'objet à moitié construit.
+        $kernel = new Kernel(
+            config: $config,
+            container: $secureContainer,
+            security: $security,
+            middlewareStack: $stack,
+            logger: $kernelLogger,
+        );
+        // L'event dispatcher est le SEUL collaborateur optionnel (les hooks de cycle
+        // de vie sont inertes sans lui) — câblé via le setter dédié au boot (ARCH-03).
+        $kernel->setEventDispatcher($eventDispatcher);
 
         return $kernel;
     }
@@ -309,6 +435,41 @@ final class AppKernelFactory
     }
 
     /**
+     * Enregistre les services finish-request des axes temps réel (REACTIVE-01) et
+     * déferralisation (ASYNC-01), puis leurs flushs sur TerminateEvent.
+     *
+     * - Buffer de diffusion : enregistré sous BroadcastBufferInterface pour que les
+     *   write-hooks `#[Broadcast]` y déposent leurs mutations et que Container::reset()
+     *   le vide à chaque boucle worker (il implémente ResettableInterface).
+     * - Runner différé : enregistré sous TaskRunnerInterface (même contrat de reset).
+     * - Listeners TerminateEvent, dans l'ordre : diffusion SSE D'ABORD (poussée
+     *   sensible à la latence), puis drain des tâches différées (potentiellement
+     *   plus long).
+     */
+    private static function registerReactiveServices(
+        ContainerInterface $container,
+        ListenerProvider $listenerProvider,
+        LoggerInterface $logger,
+    ): void {
+        // REACTIVE-01 : buffer à portée requête + transport SSE.
+        $buffer = new RequestBroadcastBuffer();
+        $container->set(BroadcastBufferInterface::class, $buffer);
+
+        // Sink SSE : écrit chaque trame sur la sortie standard (corps de réponse SSE
+        // sous FrankenPHP). Sans état — injectable pour pointer vers un hub/Mercure.
+        $transport = new SseBroadcastTransport(static function (string $frame): void {
+            fwrite(STDOUT, $frame);
+        });
+        $listenerProvider->addListener(TerminateEvent::class, new BroadcastFlushListener($buffer, $transport));
+
+        // ASYNC-01 : runner de tâches différées + drain finish-request (APRÈS la
+        // diffusion). Budget par défaut (64) ; logger pour l'isolation par tâche.
+        $runner = new DeferredTaskRunner(budget: DeferredTaskRunner::DEFAULT_BUDGET, logger: $logger);
+        $container->set(TaskRunnerInterface::class, $runner);
+        $listenerProvider->addListener(TerminateEvent::class, new DeferredTaskFlushListener($runner, $logger));
+    }
+
+    /**
      * Enregistre le cache PSR-16, le pool de connexions et le migration runner ;
      * retourne le cache (réutilisé par le routeur).
      */
@@ -323,6 +484,8 @@ final class AppKernelFactory
 
         $connectionPool = self::buildConnectionPool($config, $tracker);
         $container->set(ConnectionPoolInterface::class, $connectionPool);
+        // Contrat relationnel typé : les dépôts SQL s'injectent dessus pour un accès PDO typé.
+        $container->set(RelationalConnectionPoolInterface::class, $connectionPool);
         $container->set(PDOConnectionPool::class, $connectionPool);
 
         $migrationRunner = new MigrationRunner(pool: $connectionPool, config: $config);
@@ -330,30 +493,6 @@ final class AppKernelFactory
         $container->set(MigrationRunner::class, $migrationRunner);
 
         return $cache;
-    }
-
-    /**
-     * Injecte de façon défensive les dépendances câblées dans le kernel.
-     */
-    private static function injectKernelDependencies(
-        KernelInterface $kernel,
-        Config $config,
-        Security $security,
-        SecureContainer $secureContainer,
-        MiddlewareStack $stack,
-    ): void {
-        if (method_exists($kernel, 'setConfiguration')) {
-            $kernel->setConfiguration($config);
-        }
-        if (method_exists($kernel, 'setSecurity')) {
-            $kernel->setSecurity($security);
-        }
-        if (method_exists($kernel, 'setContainerImplementation')) {
-            $kernel->setContainerImplementation($secureContainer);
-        }
-        if (method_exists($kernel, 'setMiddlewareStack')) {
-            $kernel->setMiddlewareStack($stack);
-        }
     }
 
     /**
@@ -433,9 +572,30 @@ final class AppKernelFactory
             keys: new StaticKeyResolver(['HS256' => $authSecret]),
         );
 
+        // AXE6 / AUTH-01 : WebAuthn (passkeys). Le cœur cryptographique
+        // (WebAuthnLibAdapter, sans état) enveloppe `web-auth/webauthn-lib` ; les
+        // SEULES parties avec état (dépôt d'identifiants + magasin de défis) sont
+        // fournies par l'application en mémoire (Resettable) et enregistrées dans
+        // le conteneur, donc vidées à chaque boucle worker. La cérémonie sert
+        // l'émission d'options ; l'authenticator vérifie l'assertion entrante.
+        /** @var list<string> $webAuthnOrigins */
+        $webAuthnOrigins = $config->getArray(key: 'waffle.auth.webauthn.allowed_origins') ?? ['https://localhost'];
+        $webAuthnVerifier = new WebAuthnLibAdapter(
+            relyingPartyId: $config->getString('waffle.auth.webauthn.rp_id') ?? 'localhost',
+            relyingPartyName: $config->getString('waffle.auth.webauthn.rp_name') ?? 'Waffle Skeleton',
+            allowedOrigins: $webAuthnOrigins,
+        );
+        $credentials = new InMemoryCredentialRepository();
+        $challenges = new InMemoryChallengeStore();
+        $container->set(CredentialRepositoryInterface::class, $credentials);
+        $container->set(InMemoryCredentialRepository::class, $credentials);
+        $container->set(InMemoryChallengeStore::class, $challenges);
+        $container->set(WebAuthnCeremony::class, new WebAuthnCeremony($webAuthnVerifier, $credentials));
+
         $authBridge = new AuthenticationBridge($securityContext, [
             new AssertionAuthenticator($assertionVerifier),
             new JwtAuthenticator($jwtValidator),
+            new WebAuthnAuthenticator($webAuthnVerifier, $challenges, $credentials),
         ]);
         $container->set(AuthenticationBridgeInterface::class, $authBridge);
 

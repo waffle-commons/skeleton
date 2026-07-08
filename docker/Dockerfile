@@ -36,6 +36,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         opcache \
         zip \
         yaml \
+    && echo "apc.enable_cli=1" >> "$PHP_INI_DIR/conf.d/docker-php-ext-apcu.ini" \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Global Caddy Configuration

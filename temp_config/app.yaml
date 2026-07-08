@@ -1,0 +1,58 @@
+# Configuration de TEST de l'application Waffle.
+#
+# Référencée par tests/bootstrap.php (const APP_CONFIG = 'temp_config'), elle
+# fournit des valeurs sûres et autonomes pour amorcer le kernel sous PHPUnit
+# sans dépendance réseau : cache en mémoire (array), aucune connexion ouverte au
+# boot (le pool PDO est paresseux), secrets éphémères tolérés hors production.
+waffle:
+  env: 'test'
+  debug: true
+  trusted_hosts:
+    - localhost
+  security:
+    level: 10
+    csrf:
+      # Hors prod : un secret absent retombe sur un secret éphémère par processus.
+      secret: ''
+    cors:
+      allowed_origins: []
+    ssrf:
+      allowed_hosts: []
+  auth:
+    # Hors prod : secret éphémère par processus si absent (fail-open dev/test only).
+    secret: ''
+    tenant: 'skeleton'
+    jwt:
+      issuer: 'https://waffle-dev.local'
+      audience: 'waffle-skeleton'
+    webauthn:
+      rp_id: 'localhost'
+      rp_name: 'Waffle Skeleton'
+      allowed_origins:
+        - 'https://localhost'
+    assert_hosts: []
+  paths:
+    controllers: 'src/Controller'
+    services: 'src/Service'
+    event_listeners: 'app/EventListener'
+  log:
+    channel: app
+    stream: 'php://stderr'
+  cache:
+    # Cache en mémoire : aucun Redis requis pour amorcer le kernel sous test.
+    adapter: 'array'
+    directory: 'var/cache/psr16'
+    default_ttl: 3600
+    prefix: 'waffle:cache:'
+  database:
+    # Valeurs littérales : le pool est paresseux, aucune connexion n'est ouverte
+    # au boot ni sur une requête GET (le middleware transactionnel n'enveloppe que
+    # les écritures).
+    driver: 'mysql'
+    host: '127.0.0.1'
+    port: '3306'
+    database: 'waffle_test'
+    username: 'root'
+    password: ''
+    charset: 'utf8mb4'
+    migrations_path: 'migrations'

@@ -7,6 +7,7 @@ services:
       dockerfile: ./docker/Dockerfile
       target: dev
     image: waffle-app:dev
+    container_name: waffle-app-dev
     # En développement, le dossier local est monté sur /app.
     # Cela permet le « hot reload » et de coder sans rebuild.
     volumes:
