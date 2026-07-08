@@ -90,23 +90,5 @@
             "cyclonedx/cyclonedx-php-composer": true
         },
         "sort-packages": true
-    },
-    "repositories": [
-        {
-            "type": "path",
-            "url": "../async",
-            "canonical": false,
-            "options": {
-                "symlink": false
-            }
-        },
-        {
-            "type": "path",
-            "url": "../telemetry",
-            "canonical": false,
-            "options": {
-                "symlink": false
-            }
-        }
-    ]
+    }
 }

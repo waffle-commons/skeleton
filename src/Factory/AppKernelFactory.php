@@ -92,6 +92,7 @@ use Waffle\Commons\Security\Middleware\CorsMiddleware;
 use Waffle\Commons\Security\Middleware\CsrfMiddleware;
 use Waffle\Commons\Security\Middleware\SecurityMiddleware;
 use Waffle\Commons\Security\Security;
+use Waffle\Commons\Telemetry\Cache\MeteredCache;
 use Waffle\Commons\Telemetry\Collector\GcCollector;
 use Waffle\Commons\Telemetry\Collector\MemoryCollector;
 use Waffle\Commons\Telemetry\Collector\PoolUtilizationCollector;
@@ -346,6 +347,13 @@ final class AppKernelFactory
 
         // 7. Cache PSR-16 (RFC-013), pool de connexions + migration runner (RFC-022).
         $cache = self::registerDataServices($container, $root, $config, $connectionTracker);
+
+        // 7b. AXE 5 / OBS-02 : décorateur cache-hit-ratio — enveloppe le cache partagé
+        //     pour alimenter `waffle_cache_hits_total` / `_misses_total` dans le registre
+        //     APCu (jamais sur le tas worker), exposés via /waffle-metrics. Réenregistré
+        //     dans le conteneur : Router et tout consommateur reçoivent la version mesurée.
+        $cache = new MeteredCache($cache, $metricsRegistry);
+        $container->set(CacheInterface::class, $cache);
 
         // 8. Instanciation et démarrage du Router.
         $controllersPath = $config->getString(key: 'waffle.paths.controllers');

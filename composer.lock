@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "945338dcb2c3d17b5dae365503fccca6",
+    "content-hash": "870fb4fb609b6832be6dd8ed0aa4e91b",
     "packages": [
         {
             "name": "brick/math",
@@ -360,16 +360,16 @@
         },
         {
             "name": "phpstan/phpdoc-parser",
-            "version": "2.3.2",
+            "version": "2.3.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/phpstan/phpdoc-parser.git",
-                "reference": "a004701b11273a26cd7955a61d67a7f1e525a45a"
+                "reference": "fb19eedd2bb67ff8cf7a5502ad329e701d6398a3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpstan/phpdoc-parser/zipball/a004701b11273a26cd7955a61d67a7f1e525a45a",
-                "reference": "a004701b11273a26cd7955a61d67a7f1e525a45a",
+                "url": "https://api.github.com/repos/phpstan/phpdoc-parser/zipball/fb19eedd2bb67ff8cf7a5502ad329e701d6398a3",
+                "reference": "fb19eedd2bb67ff8cf7a5502ad329e701d6398a3",
                 "shasum": ""
             },
             "require": {
@@ -401,9 +401,9 @@
             "description": "PHPDoc parser with support for nullable, intersection and generic types",
             "support": {
                 "issues": "https://github.com/phpstan/phpdoc-parser/issues",
-                "source": "https://github.com/phpstan/phpdoc-parser/tree/2.3.2"
+                "source": "https://github.com/phpstan/phpdoc-parser/tree/2.3.3"
             },
-            "time": "2026-01-25T14:56:51+00:00"
+            "time": "2026-07-08T07:01:06+00:00"
         },
         {
             "name": "predis/predis",
@@ -1301,16 +1301,16 @@
         },
         {
             "name": "symfony/deprecation-contracts",
-            "version": "v3.7.0",
+            "version": "v3.7.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/deprecation-contracts.git",
-                "reference": "50f59d1f3ca46d41ac911f97a78626b6756af35b"
+                "reference": "f3202fa1b5097b0af062dc978b32ecf63404e31d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/deprecation-contracts/zipball/50f59d1f3ca46d41ac911f97a78626b6756af35b",
-                "reference": "50f59d1f3ca46d41ac911f97a78626b6756af35b",
+                "url": "https://api.github.com/repos/symfony/deprecation-contracts/zipball/f3202fa1b5097b0af062dc978b32ecf63404e31d",
+                "reference": "f3202fa1b5097b0af062dc978b32ecf63404e31d",
                 "shasum": ""
             },
             "require": {
@@ -1348,7 +1348,7 @@
             "description": "A generic function and convention to trigger deprecation notices",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/deprecation-contracts/tree/v3.7.0"
+                "source": "https://github.com/symfony/deprecation-contracts/tree/v3.7.1"
             },
             "funding": [
                 {
@@ -1368,7 +1368,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-04-13T15:52:40+00:00"
+            "time": "2026-06-05T06:23:12+00:00"
         },
         {
             "name": "symfony/polyfill-ctype",
@@ -1957,16 +1957,16 @@
         },
         {
             "name": "symfony/serializer",
-            "version": "v8.1.0",
+            "version": "v8.1.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/serializer.git",
-                "reference": "d101886195c5f772cf7033641fe9c40c3e3969e1"
+                "reference": "f911b744bc24658f435ea30439cfe536f0173a3a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/serializer/zipball/d101886195c5f772cf7033641fe9c40c3e3969e1",
-                "reference": "d101886195c5f772cf7033641fe9c40c3e3969e1",
+                "url": "https://api.github.com/repos/symfony/serializer/zipball/f911b744bc24658f435ea30439cfe536f0173a3a",
+                "reference": "f911b744bc24658f435ea30439cfe536f0173a3a",
                 "shasum": ""
             },
             "require": {
@@ -2032,7 +2032,7 @@
             "description": "Handles serializing and deserializing data structures, including object graphs, into array structures or other formats like XML and JSON.",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/serializer/tree/v8.1.0"
+                "source": "https://github.com/symfony/serializer/tree/v8.1.1"
             },
             "funding": [
                 {
@@ -2052,7 +2052,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-05-29T05:06:50+00:00"
+            "time": "2026-06-27T09:05:56+00:00"
         },
         {
             "name": "symfony/string",
@@ -2307,10 +2307,16 @@
         {
             "name": "waffle-commons/async",
             "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/waffle-commons/async.git",
+                "reference": "0dc815bd63058adad85f961e601461582b608d34"
+            },
             "dist": {
-                "type": "path",
-                "url": "../async",
-                "reference": "9c43645473d175b41754c7c174e0da663d69dbf7"
+                "type": "zip",
+                "url": "https://api.github.com/repos/waffle-commons/async/zipball/0dc815bd63058adad85f961e601461582b608d34",
+                "reference": "0dc815bd63058adad85f961e601461582b608d34",
+                "shasum": ""
             },
             "require": {
                 "php": "^8.5",
@@ -2325,56 +2331,14 @@
                 "phpunit/phpunit": "^12.5",
                 "vimeo/psalm": "^6.16"
             },
+            "default-branch": true,
             "type": "library",
             "autoload": {
                 "psr-4": {
                     "Waffle\\Commons\\Async\\": "src/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "WaffleTests\\Commons\\Async\\": "tests/src/"
-                }
-            },
-            "scripts": {
-                "formatter": [
-                    "vendor/bin/mago fmt"
-                ],
-                "linter": [
-                    "vendor/bin/mago lint"
-                ],
-                "analyzer": [
-                    "vendor/bin/mago analyze"
-                ],
-                "guard": [
-                    "vendor/bin/mago guard"
-                ],
-                "igor": [
-                    "vendor/bin/igor-php ."
-                ],
-                "phpunit": [
-                    "vendor/bin/phpunit --log-junit var/data/phpunit-coverage/junit.xml --coverage-html var/data/phpunit-coverage"
-                ],
-                "mago": [
-                    "@formatter",
-                    "@linter",
-                    "@analyzer",
-                    "@guard"
-                ],
-                "tests": [
-                    "@phpunit"
-                ],
-                "scan": [
-                    "@mago",
-                    "@tests"
-                ],
-                "ci": [
-                    "@mago",
-                    "@tests",
-                    "composer audit",
-                    "vendor/bin/psalm --taint-analysis"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -2385,10 +2349,11 @@
                 }
             ],
             "description": "Fiber-based finish-request deferred task runner for Waffle Commons: short post-response work lifted out of the user-perceived latency path, under a bounded per-request budget.",
-            "transport-options": {
-                "symlink": false,
-                "relative": true
-            }
+            "support": {
+                "issues": "https://github.com/waffle-commons/async/issues",
+                "source": "https://github.com/waffle-commons/async/tree/main"
+            },
+            "time": "2026-07-08T16:06:18+00:00"
         },
         {
             "name": "waffle-commons/auth",
@@ -2396,12 +2361,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/auth.git",
-                "reference": "f158a4629dd0613d9f5588c34a002f4756d67488"
+                "reference": "384a3b22a0a69a47cfa983e41306208aca7371b3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/auth/zipball/f158a4629dd0613d9f5588c34a002f4756d67488",
-                "reference": "f158a4629dd0613d9f5588c34a002f4756d67488",
+                "url": "https://api.github.com/repos/waffle-commons/auth/zipball/384a3b22a0a69a47cfa983e41306208aca7371b3",
+                "reference": "384a3b22a0a69a47cfa983e41306208aca7371b3",
                 "shasum": ""
             },
             "require": {
@@ -2414,7 +2379,10 @@
                 "psr/http-server-middleware": "^1.0",
                 "psr/log": "^3.0",
                 "psr/simple-cache": "^3.0",
-                "waffle-commons/contracts": "self.version"
+                "symfony/serializer": "^8.1",
+                "symfony/uid": "^8.1",
+                "waffle-commons/contracts": "self.version",
+                "web-auth/webauthn-lib": "^5.3"
             },
             "require-dev": {
                 "carthage-software/mago": "^1.29",
@@ -2422,7 +2390,9 @@
                 "igor-php/igor-php": "^0.7.0",
                 "php-mock/php-mock-phpunit": "^2.15",
                 "phpunit/phpunit": "^12.5",
-                "vimeo/psalm": "^6.16"
+                "spomky-labs/cbor-php": "^3.2",
+                "vimeo/psalm": "^6.16",
+                "web-auth/cose-lib": "^4.5"
             },
             "default-branch": true,
             "type": "library",
@@ -2446,7 +2416,7 @@
                 "issues": "https://github.com/waffle-commons/auth/issues",
                 "source": "https://github.com/waffle-commons/auth/tree/main"
             },
-            "time": "2026-06-14T05:11:19+00:00"
+            "time": "2026-07-08T16:18:39+00:00"
         },
         {
             "name": "waffle-commons/cache",
@@ -2454,12 +2424,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/cache.git",
-                "reference": "562ae69a6e552a46033044042ab688b7af01134b"
+                "reference": "408ae376edc8c3e75d5b8e6486319309bdf9429a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/cache/zipball/562ae69a6e552a46033044042ab688b7af01134b",
-                "reference": "562ae69a6e552a46033044042ab688b7af01134b",
+                "url": "https://api.github.com/repos/waffle-commons/cache/zipball/408ae376edc8c3e75d5b8e6486319309bdf9429a",
+                "reference": "408ae376edc8c3e75d5b8e6486319309bdf9429a",
                 "shasum": ""
             },
             "require": {
@@ -2497,7 +2467,7 @@
                 "issues": "https://github.com/waffle-commons/cache/issues",
                 "source": "https://github.com/waffle-commons/cache/tree/main"
             },
-            "time": "2026-06-14T05:13:18+00:00"
+            "time": "2026-07-08T16:20:55+00:00"
         },
         {
             "name": "waffle-commons/config",
@@ -2505,12 +2475,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/config.git",
-                "reference": "5e8faa8165ab687b8ed7bb630b4eb37ab8c3dc37"
+                "reference": "ef95521cfaf5d3e4ae3d054133e63745febb4fad"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/config/zipball/5e8faa8165ab687b8ed7bb630b4eb37ab8c3dc37",
-                "reference": "5e8faa8165ab687b8ed7bb630b4eb37ab8c3dc37",
+                "url": "https://api.github.com/repos/waffle-commons/config/zipball/ef95521cfaf5d3e4ae3d054133e63745febb4fad",
+                "reference": "ef95521cfaf5d3e4ae3d054133e63745febb4fad",
                 "shasum": ""
             },
             "require": {
@@ -2547,7 +2517,7 @@
                 "issues": "https://github.com/waffle-commons/config/issues",
                 "source": "https://github.com/waffle-commons/config/tree/main"
             },
-            "time": "2026-06-14T05:15:47+00:00"
+            "time": "2026-07-08T16:22:34+00:00"
         },
         {
             "name": "waffle-commons/console",
@@ -2555,12 +2525,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/console.git",
-                "reference": "d8524c8d7967856e077774c1a4fec9a55cd28aed"
+                "reference": "e737c598a8ed483363cb22509fe74c27630f8918"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/console/zipball/d8524c8d7967856e077774c1a4fec9a55cd28aed",
-                "reference": "d8524c8d7967856e077774c1a4fec9a55cd28aed",
+                "url": "https://api.github.com/repos/waffle-commons/console/zipball/e737c598a8ed483363cb22509fe74c27630f8918",
+                "reference": "e737c598a8ed483363cb22509fe74c27630f8918",
                 "shasum": ""
             },
             "require": {
@@ -2597,7 +2567,7 @@
                 "issues": "https://github.com/waffle-commons/console/issues",
                 "source": "https://github.com/waffle-commons/console/tree/main"
             },
-            "time": "2026-06-14T05:32:13+00:00"
+            "time": "2026-07-08T16:26:39+00:00"
         },
         {
             "name": "waffle-commons/container",
@@ -2605,12 +2575,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/container.git",
-                "reference": "2c7bb1e61eb1f916d55f798883f617a30ea4363f"
+                "reference": "2858b1c934c7091222b7e411f1e86d98db2a4d57"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/container/zipball/2c7bb1e61eb1f916d55f798883f617a30ea4363f",
-                "reference": "2c7bb1e61eb1f916d55f798883f617a30ea4363f",
+                "url": "https://api.github.com/repos/waffle-commons/container/zipball/2858b1c934c7091222b7e411f1e86d98db2a4d57",
+                "reference": "2858b1c934c7091222b7e411f1e86d98db2a4d57",
                 "shasum": ""
             },
             "require": {
@@ -2648,7 +2618,7 @@
                 "issues": "https://github.com/waffle-commons/container/issues",
                 "source": "https://github.com/waffle-commons/container/tree/main"
             },
-            "time": "2026-06-14T05:22:59+00:00"
+            "time": "2026-07-08T16:27:33+00:00"
         },
         {
             "name": "waffle-commons/contracts",
@@ -2656,12 +2626,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/contracts.git",
-                "reference": "a53e5e7a69db60bb8bc659dd5bb52c83333b0aa5"
+                "reference": "b1f1e1974ba8ddabcac2cd0528bd635c025960bf"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/contracts/zipball/a53e5e7a69db60bb8bc659dd5bb52c83333b0aa5",
-                "reference": "a53e5e7a69db60bb8bc659dd5bb52c83333b0aa5",
+                "url": "https://api.github.com/repos/waffle-commons/contracts/zipball/b1f1e1974ba8ddabcac2cd0528bd635c025960bf",
+                "reference": "b1f1e1974ba8ddabcac2cd0528bd635c025960bf",
                 "shasum": ""
             },
             "require": {
@@ -2705,7 +2675,7 @@
                 "issues": "https://github.com/waffle-commons/contracts/issues",
                 "source": "https://github.com/waffle-commons/contracts/tree/main"
             },
-            "time": "2026-06-14T05:02:10+00:00"
+            "time": "2026-07-08T15:31:26+00:00"
         },
         {
             "name": "waffle-commons/data",
@@ -2713,12 +2683,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/data.git",
-                "reference": "9ac9e9cf190e4c47dca48b9ddb755ad59335e9b0"
+                "reference": "b8b98f689c979814a48d1776b988bc004833370c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/data/zipball/9ac9e9cf190e4c47dca48b9ddb755ad59335e9b0",
-                "reference": "9ac9e9cf190e4c47dca48b9ddb755ad59335e9b0",
+                "url": "https://api.github.com/repos/waffle-commons/data/zipball/b8b98f689c979814a48d1776b988bc004833370c",
+                "reference": "b8b98f689c979814a48d1776b988bc004833370c",
                 "shasum": ""
             },
             "require": {
@@ -2727,6 +2697,8 @@
                 "psr/http-client": "^1.0",
                 "psr/http-factory": "^1.0",
                 "psr/http-message": "^1.1 || ^2.0",
+                "psr/http-server-handler": "^1.0",
+                "psr/http-server-middleware": "^1.0",
                 "waffle-commons/contracts": "self.version"
             },
             "require-dev": {
@@ -2763,7 +2735,7 @@
                 "issues": "https://github.com/waffle-commons/data/issues",
                 "source": "https://github.com/waffle-commons/data/tree/main"
             },
-            "time": "2026-06-14T05:34:19+00:00"
+            "time": "2026-07-08T16:30:39+00:00"
         },
         {
             "name": "waffle-commons/error-handler",
@@ -2771,12 +2743,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/error-handler.git",
-                "reference": "82880cc594f10c9d833e2e96b385f95036e398e8"
+                "reference": "297528d1b38effce63a778baf896ed7bfaa385b6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/error-handler/zipball/82880cc594f10c9d833e2e96b385f95036e398e8",
-                "reference": "82880cc594f10c9d833e2e96b385f95036e398e8",
+                "url": "https://api.github.com/repos/waffle-commons/error-handler/zipball/297528d1b38effce63a778baf896ed7bfaa385b6",
+                "reference": "297528d1b38effce63a778baf896ed7bfaa385b6",
                 "shasum": ""
             },
             "require": {
@@ -2815,7 +2787,7 @@
                 "issues": "https://github.com/waffle-commons/error-handler/issues",
                 "source": "https://github.com/waffle-commons/error-handler/tree/main"
             },
-            "time": "2026-06-14T05:37:51+00:00"
+            "time": "2026-07-08T16:34:10+00:00"
         },
         {
             "name": "waffle-commons/event-dispatcher",
@@ -2823,12 +2795,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/event-dispatcher.git",
-                "reference": "3453cc6f278847382608aed85b9b9610afe265e6"
+                "reference": "7b55e0b1cec6731506ca1405aa4843c97421ab3e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/event-dispatcher/zipball/3453cc6f278847382608aed85b9b9610afe265e6",
-                "reference": "3453cc6f278847382608aed85b9b9610afe265e6",
+                "url": "https://api.github.com/repos/waffle-commons/event-dispatcher/zipball/7b55e0b1cec6731506ca1405aa4843c97421ab3e",
+                "reference": "7b55e0b1cec6731506ca1405aa4843c97421ab3e",
                 "shasum": ""
             },
             "require": {
@@ -2866,7 +2838,7 @@
                 "issues": "https://github.com/waffle-commons/event-dispatcher/issues",
                 "source": "https://github.com/waffle-commons/event-dispatcher/tree/main"
             },
-            "time": "2026-06-14T05:40:07+00:00"
+            "time": "2026-07-08T16:36:12+00:00"
         },
         {
             "name": "waffle-commons/http",
@@ -2874,12 +2846,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/http.git",
-                "reference": "da1fe5320cf17637b73b10e36b55e7f9bb17c86b"
+                "reference": "0c46d2dee343263e1c67759f2f2da6a6f3d12362"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/http/zipball/da1fe5320cf17637b73b10e36b55e7f9bb17c86b",
-                "reference": "da1fe5320cf17637b73b10e36b55e7f9bb17c86b",
+                "url": "https://api.github.com/repos/waffle-commons/http/zipball/0c46d2dee343263e1c67759f2f2da6a6f3d12362",
+                "reference": "0c46d2dee343263e1c67759f2f2da6a6f3d12362",
                 "shasum": ""
             },
             "require": {
@@ -2919,7 +2891,7 @@
                 "issues": "https://github.com/waffle-commons/http/issues",
                 "source": "https://github.com/waffle-commons/http/tree/main"
             },
-            "time": "2026-06-14T05:42:50+00:00"
+            "time": "2026-07-08T16:38:26+00:00"
         },
         {
             "name": "waffle-commons/http-client",
@@ -2927,12 +2899,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/http-client.git",
-                "reference": "422b13af81b94815483b367f1eb6d29dbbc92eb0"
+                "reference": "04dab91ae0a17efc1627e55277ff5a433fccd108"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/http-client/zipball/422b13af81b94815483b367f1eb6d29dbbc92eb0",
-                "reference": "422b13af81b94815483b367f1eb6d29dbbc92eb0",
+                "url": "https://api.github.com/repos/waffle-commons/http-client/zipball/04dab91ae0a17efc1627e55277ff5a433fccd108",
+                "reference": "04dab91ae0a17efc1627e55277ff5a433fccd108",
                 "shasum": ""
             },
             "require": {
@@ -2975,7 +2947,7 @@
                 "issues": "https://github.com/waffle-commons/http-client/issues",
                 "source": "https://github.com/waffle-commons/http-client/tree/main"
             },
-            "time": "2026-06-14T05:44:36+00:00"
+            "time": "2026-07-08T16:39:29+00:00"
         },
         {
             "name": "waffle-commons/log",
@@ -2983,12 +2955,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/log.git",
-                "reference": "356341a6055ac9720bf1f8a8a04f877181acc55e"
+                "reference": "39c607d585b0de97279530c3addf99b35a15e6e7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/log/zipball/356341a6055ac9720bf1f8a8a04f877181acc55e",
-                "reference": "356341a6055ac9720bf1f8a8a04f877181acc55e",
+                "url": "https://api.github.com/repos/waffle-commons/log/zipball/39c607d585b0de97279530c3addf99b35a15e6e7",
+                "reference": "39c607d585b0de97279530c3addf99b35a15e6e7",
                 "shasum": ""
             },
             "require": {
@@ -3025,7 +2997,7 @@
                 "issues": "https://github.com/waffle-commons/log/issues",
                 "source": "https://github.com/waffle-commons/log/tree/main"
             },
-            "time": "2026-06-14T05:47:05+00:00"
+            "time": "2026-07-08T16:41:56+00:00"
         },
         {
             "name": "waffle-commons/pipeline",
@@ -3033,12 +3005,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/pipeline.git",
-                "reference": "e8ac82e970e8059efba8fb0523f904dc273b2447"
+                "reference": "7a0d4779cca8029ce44bee57e1577484b38ce201"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/pipeline/zipball/e8ac82e970e8059efba8fb0523f904dc273b2447",
-                "reference": "e8ac82e970e8059efba8fb0523f904dc273b2447",
+                "url": "https://api.github.com/repos/waffle-commons/pipeline/zipball/7a0d4779cca8029ce44bee57e1577484b38ce201",
+                "reference": "7a0d4779cca8029ce44bee57e1577484b38ce201",
                 "shasum": ""
             },
             "require": {
@@ -3077,7 +3049,7 @@
                 "issues": "https://github.com/waffle-commons/pipeline/issues",
                 "source": "https://github.com/waffle-commons/pipeline/tree/main"
             },
-            "time": "2026-06-14T05:48:31+00:00"
+            "time": "2026-07-08T16:44:06+00:00"
         },
         {
             "name": "waffle-commons/routing",
@@ -3085,12 +3057,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/routing.git",
-                "reference": "a4ee89ea6dc2154b434eb29876a2ce2ab06d5c25"
+                "reference": "fcba0f122846bf98e2b761c4c4dbdc37f82c807e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/routing/zipball/a4ee89ea6dc2154b434eb29876a2ce2ab06d5c25",
-                "reference": "a4ee89ea6dc2154b434eb29876a2ce2ab06d5c25",
+                "url": "https://api.github.com/repos/waffle-commons/routing/zipball/fcba0f122846bf98e2b761c4c4dbdc37f82c807e",
+                "reference": "fcba0f122846bf98e2b761c4c4dbdc37f82c807e",
                 "shasum": ""
             },
             "require": {
@@ -3128,7 +3100,7 @@
                 "issues": "https://github.com/waffle-commons/routing/issues",
                 "source": "https://github.com/waffle-commons/routing/tree/main"
             },
-            "time": "2026-06-14T05:51:28+00:00"
+            "time": "2026-07-08T16:46:12+00:00"
         },
         {
             "name": "waffle-commons/runtime",
@@ -3136,12 +3108,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/runtime.git",
-                "reference": "a33be205fa38f83cf5b7ed26e3315e87c677d9b5"
+                "reference": "ba597e389d22bb8f80e94090d27aefdd61c94127"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/runtime/zipball/a33be205fa38f83cf5b7ed26e3315e87c677d9b5",
-                "reference": "a33be205fa38f83cf5b7ed26e3315e87c677d9b5",
+                "url": "https://api.github.com/repos/waffle-commons/runtime/zipball/ba597e389d22bb8f80e94090d27aefdd61c94127",
+                "reference": "ba597e389d22bb8f80e94090d27aefdd61c94127",
                 "shasum": ""
             },
             "require": {
@@ -3180,7 +3152,7 @@
                 "issues": "https://github.com/waffle-commons/runtime/issues",
                 "source": "https://github.com/waffle-commons/runtime/tree/main"
             },
-            "time": "2026-06-14T05:53:13+00:00"
+            "time": "2026-07-08T16:49:29+00:00"
         },
         {
             "name": "waffle-commons/security",
@@ -3188,12 +3160,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/security.git",
-                "reference": "1f30afb502d1ec8836cc686501e9a68424253867"
+                "reference": "9a6a38ed94d18317f2e5df9fad2286ce380cb6c0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/security/zipball/1f30afb502d1ec8836cc686501e9a68424253867",
-                "reference": "1f30afb502d1ec8836cc686501e9a68424253867",
+                "url": "https://api.github.com/repos/waffle-commons/security/zipball/9a6a38ed94d18317f2e5df9fad2286ce380cb6c0",
+                "reference": "9a6a38ed94d18317f2e5df9fad2286ce380cb6c0",
                 "shasum": ""
             },
             "require": {
@@ -3235,15 +3207,21 @@
                 "issues": "https://github.com/waffle-commons/security/issues",
                 "source": "https://github.com/waffle-commons/security/tree/main"
             },
-            "time": "2026-06-14T05:54:34+00:00"
+            "time": "2026-07-08T16:51:47+00:00"
         },
         {
             "name": "waffle-commons/telemetry",
             "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/waffle-commons/telemetry.git",
+                "reference": "6c5e32075e15d3b7ce703b87e26117b54bb44a34"
+            },
             "dist": {
-                "type": "path",
-                "url": "../telemetry",
-                "reference": "035dddd25781c45d1528fb1f72d2685bddff92c4"
+                "type": "zip",
+                "url": "https://api.github.com/repos/waffle-commons/telemetry/zipball/6c5e32075e15d3b7ce703b87e26117b54bb44a34",
+                "reference": "6c5e32075e15d3b7ce703b87e26117b54bb44a34",
+                "shasum": ""
             },
             "require": {
                 "php": "^8.5",
@@ -3258,60 +3236,14 @@
                 "phpunit/phpunit": "^12.5",
                 "vimeo/psalm": "^6.16"
             },
+            "default-branch": true,
             "type": "library",
             "autoload": {
                 "psr-4": {
                     "Waffle\\Commons\\Telemetry\\": "src/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "WaffleTests\\Commons\\Telemetry\\": "tests/src/"
-                }
-            },
-            "scripts": {
-                "formatter": [
-                    "vendor/bin/mago fmt"
-                ],
-                "linter": [
-                    "vendor/bin/mago lint"
-                ],
-                "analyzer": [
-                    "vendor/bin/mago analyze"
-                ],
-                "guard": [
-                    "vendor/bin/mago guard"
-                ],
-                "igor": [
-                    "vendor/bin/igor-php ."
-                ],
-                "phpunit": [
-                    "vendor/bin/phpunit --log-junit var/data/phpunit-coverage/junit.xml --coverage-html var/data/phpunit-coverage"
-                ],
-                "benchmark": [
-                    "Composer\\Config::disableProcessTimeout",
-                    "vendor/bin/phpbench run --report=default_report --output=waffle_html --retry-threshold=10"
-                ],
-                "mago": [
-                    "@formatter",
-                    "@linter",
-                    "@analyzer",
-                    "@guard"
-                ],
-                "tests": [
-                    "@phpunit"
-                ],
-                "scan": [
-                    "@mago",
-                    "@tests"
-                ],
-                "ci": [
-                    "@mago",
-                    "@tests",
-                    "composer audit",
-                    "vendor/bin/psalm --taint-analysis"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -3322,10 +3254,11 @@
                 }
             ],
             "description": "SDK-free enterprise telemetry for Waffle Commons: contract-first tracing no-ops, a Prometheus /waffle-metrics exporter, and stateless worker-metric collectors.",
-            "transport-options": {
-                "symlink": false,
-                "relative": true
-            }
+            "support": {
+                "issues": "https://github.com/waffle-commons/telemetry/issues",
+                "source": "https://github.com/waffle-commons/telemetry/tree/main"
+            },
+            "time": "2026-07-08T15:52:24+00:00"
         },
         {
             "name": "waffle-commons/utils",
@@ -3333,12 +3266,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/utils.git",
-                "reference": "2418d28585205a7160719815d5ec6b8bf71aaaae"
+                "reference": "10b03b9e5b42371439f0c845203d8c0b730c94cd"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/utils/zipball/2418d28585205a7160719815d5ec6b8bf71aaaae",
-                "reference": "2418d28585205a7160719815d5ec6b8bf71aaaae",
+                "url": "https://api.github.com/repos/waffle-commons/utils/zipball/10b03b9e5b42371439f0c845203d8c0b730c94cd",
+                "reference": "10b03b9e5b42371439f0c845203d8c0b730c94cd",
                 "shasum": ""
             },
             "require": {
@@ -3375,7 +3308,7 @@
                 "issues": "https://github.com/waffle-commons/utils/issues",
                 "source": "https://github.com/waffle-commons/utils/tree/main"
             },
-            "time": "2026-06-14T05:06:15+00:00"
+            "time": "2026-07-08T15:36:59+00:00"
         },
         {
             "name": "waffle-commons/waffle",
@@ -3383,12 +3316,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/waffle-commons/waffle.git",
-                "reference": "dec69973ed17d0d09bdc01ff5513002fff8e62d6"
+                "reference": "eaa33953cbcb49b7205e9bf1fb9983537fedfbbd"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/waffle-commons/waffle/zipball/dec69973ed17d0d09bdc01ff5513002fff8e62d6",
-                "reference": "dec69973ed17d0d09bdc01ff5513002fff8e62d6",
+                "url": "https://api.github.com/repos/waffle-commons/waffle/zipball/eaa33953cbcb49b7205e9bf1fb9983537fedfbbd",
+                "reference": "eaa33953cbcb49b7205e9bf1fb9983537fedfbbd",
                 "shasum": ""
             },
             "require": {
@@ -3433,7 +3366,7 @@
                 "issues": "https://github.com/waffle-commons/waffle/issues",
                 "source": "https://github.com/waffle-commons/waffle/tree/main"
             },
-            "time": "2026-06-14T05:56:58+00:00"
+            "time": "2026-07-08T16:54:57+00:00"
         },
         {
             "name": "web-auth/cose-lib",
@@ -3594,16 +3527,16 @@
         },
         {
             "name": "webmozart/assert",
-            "version": "2.4.0",
+            "version": "2.4.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/webmozarts/assert.git",
-                "reference": "9007ea6f45ecf352a9422b36644e4bfc039b9155"
+                "reference": "2ccb7c2e821038c03a3e6e1700c570c158c55f70"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/webmozarts/assert/zipball/9007ea6f45ecf352a9422b36644e4bfc039b9155",
-                "reference": "9007ea6f45ecf352a9422b36644e4bfc039b9155",
+                "url": "https://api.github.com/repos/webmozarts/assert/zipball/2ccb7c2e821038c03a3e6e1700c570c158c55f70",
+                "reference": "2ccb7c2e821038c03a3e6e1700c570c158c55f70",
                 "shasum": ""
             },
             "require": {
@@ -3654,24 +3587,24 @@
             ],
             "support": {
                 "issues": "https://github.com/webmozarts/assert/issues",
-                "source": "https://github.com/webmozarts/assert/tree/2.4.0"
+                "source": "https://github.com/webmozarts/assert/tree/2.4.1"
             },
-            "time": "2026-05-20T13:07:01+00:00"
+            "time": "2026-06-15T15:31:57+00:00"
         }
     ],
     "packages-dev": [
         {
             "name": "amphp/amp",
-            "version": "v3.1.1",
+            "version": "v3.1.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/amphp/amp.git",
-                "reference": "fa0ab33a6f47a82929c38d03ca47ebb71086a93f"
+                "reference": "2f3ebed5a4f663968a0590dbb7654a8b32cb63cb"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/amphp/amp/zipball/fa0ab33a6f47a82929c38d03ca47ebb71086a93f",
-                "reference": "fa0ab33a6f47a82929c38d03ca47ebb71086a93f",
+                "url": "https://api.github.com/repos/amphp/amp/zipball/2f3ebed5a4f663968a0590dbb7654a8b32cb63cb",
+                "reference": "2f3ebed5a4f663968a0590dbb7654a8b32cb63cb",
                 "shasum": ""
             },
             "require": {
@@ -3681,7 +3614,7 @@
             "require-dev": {
                 "amphp/php-cs-fixer-config": "^2",
                 "phpunit/phpunit": "^9",
-                "psalm/phar": "5.23.1"
+                "psalm/phar": "6.16.1"
             },
             "type": "library",
             "autoload": {
@@ -3731,7 +3664,7 @@
             ],
             "support": {
                 "issues": "https://github.com/amphp/amp/issues",
-                "source": "https://github.com/amphp/amp/tree/v3.1.1"
+                "source": "https://github.com/amphp/amp/tree/v3.1.2"
             },
             "funding": [
                 {
@@ -3739,7 +3672,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2025-08-27T21:42:00+00:00"
+            "time": "2026-06-21T13:59:44+00:00"
         },
         {
             "name": "amphp/byte-stream",
@@ -4118,16 +4051,16 @@
         },
         {
             "name": "amphp/pipeline",
-            "version": "v1.2.4",
+            "version": "v1.2.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/amphp/pipeline.git",
-                "reference": "a044733e080940d1483f56caff0c412ad6982776"
+                "reference": "92f121dde31cd1d89d5d0f9eba64ac40271b236e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/amphp/pipeline/zipball/a044733e080940d1483f56caff0c412ad6982776",
-                "reference": "a044733e080940d1483f56caff0c412ad6982776",
+                "url": "https://api.github.com/repos/amphp/pipeline/zipball/92f121dde31cd1d89d5d0f9eba64ac40271b236e",
+                "reference": "92f121dde31cd1d89d5d0f9eba64ac40271b236e",
                 "shasum": ""
             },
             "require": {
@@ -4173,7 +4106,7 @@
             ],
             "support": {
                 "issues": "https://github.com/amphp/pipeline/issues",
-                "source": "https://github.com/amphp/pipeline/tree/v1.2.4"
+                "source": "https://github.com/amphp/pipeline/tree/v1.2.5"
             },
             "funding": [
                 {
@@ -4181,7 +4114,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-05-06T05:37:57+00:00"
+            "time": "2026-06-27T14:17:20+00:00"
         },
         {
             "name": "amphp/process",
@@ -4479,16 +4412,16 @@
         },
         {
             "name": "carthage-software/mago",
-            "version": "1.30.0",
+            "version": "1.43.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/carthage-software/mago.git",
-                "reference": "0e8a3644d974984069fa27b0ffbb44123b1b74cd"
+                "reference": "3bee8a65ba55d037f8a9656e7b6be029f817c4e3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/carthage-software/mago/zipball/0e8a3644d974984069fa27b0ffbb44123b1b74cd",
-                "reference": "0e8a3644d974984069fa27b0ffbb44123b1b74cd",
+                "url": "https://api.github.com/repos/carthage-software/mago/zipball/3bee8a65ba55d037f8a9656e7b6be029f817c4e3",
+                "reference": "3bee8a65ba55d037f8a9656e7b6be029f817c4e3",
                 "shasum": ""
             },
             "require": {
@@ -4526,7 +4459,7 @@
             ],
             "support": {
                 "issues": "https://github.com/carthage-software/mago/issues",
-                "source": "https://github.com/carthage-software/mago/tree/1.30.0"
+                "source": "https://github.com/carthage-software/mago/tree/1.43.0"
             },
             "funding": [
                 {
@@ -4534,7 +4467,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-06-04T15:46:37+00:00"
+            "time": "2026-07-05T12:16:04+00:00"
         },
         {
             "name": "composer/pcre",
@@ -5657,20 +5590,19 @@
         },
         {
             "name": "nikic/php-parser",
-            "version": "v5.7.0",
+            "version": "v5.8.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/nikic/PHP-Parser.git",
-                "reference": "dca41cd15c2ac9d055ad70dbfd011130757d1f82"
+                "reference": "044a6a392ff8ad0d61f14370a5fbbd0a0107152f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nikic/PHP-Parser/zipball/dca41cd15c2ac9d055ad70dbfd011130757d1f82",
-                "reference": "dca41cd15c2ac9d055ad70dbfd011130757d1f82",
+                "url": "https://api.github.com/repos/nikic/PHP-Parser/zipball/044a6a392ff8ad0d61f14370a5fbbd0a0107152f",
+                "reference": "044a6a392ff8ad0d61f14370a5fbbd0a0107152f",
                 "shasum": ""
             },
             "require": {
-                "ext-ctype": "*",
                 "ext-json": "*",
                 "ext-tokenizer": "*",
                 "php": ">=7.4"
@@ -5709,9 +5641,9 @@
             ],
             "support": {
                 "issues": "https://github.com/nikic/PHP-Parser/issues",
-                "source": "https://github.com/nikic/PHP-Parser/tree/v5.7.0"
+                "source": "https://github.com/nikic/PHP-Parser/tree/v5.8.0"
             },
-            "time": "2025-12-06T11:56:16+00:00"
+            "time": "2026-07-04T14:30:18+00:00"
         },
         {
             "name": "opis/json-schema",
@@ -6641,24 +6573,24 @@
         },
         {
             "name": "phpunit/phpunit",
-            "version": "12.5.29",
+            "version": "12.5.31",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/phpunit.git",
-                "reference": "9aa66a47db3ea70f1a468e66dd969f67e594945a"
+                "reference": "0608d157a284f15cc73b99a3327eff06b66a176d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/9aa66a47db3ea70f1a468e66dd969f67e594945a",
-                "reference": "9aa66a47db3ea70f1a468e66dd969f67e594945a",
+                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/0608d157a284f15cc73b99a3327eff06b66a176d",
+                "reference": "0608d157a284f15cc73b99a3327eff06b66a176d",
                 "shasum": ""
             },
             "require": {
                 "ext-dom": "*",
+                "ext-filter": "*",
                 "ext-json": "*",
                 "ext-libxml": "*",
                 "ext-mbstring": "*",
-                "ext-xml": "*",
                 "ext-xmlwriter": "*",
                 "myclabs/deep-copy": "^1.13.4",
                 "phar-io/manifest": "^2.0.4",
@@ -6719,7 +6651,7 @@
             "support": {
                 "issues": "https://github.com/sebastianbergmann/phpunit/issues",
                 "security": "https://github.com/sebastianbergmann/phpunit/security/policy",
-                "source": "https://github.com/sebastianbergmann/phpunit/tree/12.5.29"
+                "source": "https://github.com/sebastianbergmann/phpunit/tree/12.5.31"
             },
             "funding": [
                 {
@@ -6727,7 +6659,7 @@
                     "type": "other"
                 }
             ],
-            "time": "2026-06-04T06:14:42+00:00"
+            "time": "2026-07-06T14:54:16+00:00"
         },
         {
             "name": "revolt/event-loop",
@@ -7832,16 +7764,16 @@
         },
         {
             "name": "symfony/console",
-            "version": "v8.1.0",
+            "version": "v8.1.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/console.git",
-                "reference": "f5a856c6ecb56b3c21ed94a5b7bf940d857d110a"
+                "reference": "b711a8ab808b6c074c6b8caef70d0fd8d6b6d07d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/console/zipball/f5a856c6ecb56b3c21ed94a5b7bf940d857d110a",
-                "reference": "f5a856c6ecb56b3c21ed94a5b7bf940d857d110a",
+                "url": "https://api.github.com/repos/symfony/console/zipball/b711a8ab808b6c074c6b8caef70d0fd8d6b6d07d",
+                "reference": "b711a8ab808b6c074c6b8caef70d0fd8d6b6d07d",
                 "shasum": ""
             },
             "require": {
@@ -7908,7 +7840,7 @@
                 "terminal"
             ],
             "support": {
-                "source": "https://github.com/symfony/console/tree/v8.1.0"
+                "source": "https://github.com/symfony/console/tree/v8.1.1"
             },
             "funding": [
                 {
@@ -7928,7 +7860,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-05-29T05:06:50+00:00"
+            "time": "2026-06-16T12:55:20+00:00"
         },
         {
             "name": "symfony/filesystem",
@@ -8163,16 +8095,16 @@
         },
         {
             "name": "symfony/service-contracts",
-            "version": "v3.7.0",
+            "version": "v3.7.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/service-contracts.git",
-                "reference": "d25d82433a80eba6aa0e6c24b61d7370d99e444a"
+                "reference": "c0a284bab1ed8aa0417e3d69250ab437739563a0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/service-contracts/zipball/d25d82433a80eba6aa0e6c24b61d7370d99e444a",
-                "reference": "d25d82433a80eba6aa0e6c24b61d7370d99e444a",
+                "url": "https://api.github.com/repos/symfony/service-contracts/zipball/c0a284bab1ed8aa0417e3d69250ab437739563a0",
+                "reference": "c0a284bab1ed8aa0417e3d69250ab437739563a0",
                 "shasum": ""
             },
             "require": {
@@ -8226,7 +8158,7 @@
                 "standards"
             ],
             "support": {
-                "source": "https://github.com/symfony/service-contracts/tree/v3.7.0"
+                "source": "https://github.com/symfony/service-contracts/tree/v3.7.1"
             },
             "funding": [
                 {
@@ -8246,7 +8178,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-03-28T09:44:51+00:00"
+            "time": "2026-06-16T09:55:08+00:00"
         },
         {
             "name": "theseer/tokenizer",
