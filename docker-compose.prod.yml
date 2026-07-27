@@ -8,9 +8,41 @@ services:
       target: prod
     image: waffle-app:prod
     container_name: waffle-app-prod
-    # CRITIQUE : pas de volumes en production !
-    # Le code est immuable et figé dans l'image.
-    volumes: []
+    # Durcissement (Beta6 audit FIX-01 #13) : le conteneur ne tourne plus root
+    # (cf. la stage 'prod' du Dockerfile — utilisateur non-root dédié), le
+    # système de fichiers racine est immuable au runtime, et l'escalade de
+    # privilèges via setuid/setgid est désactivée.
+    read_only: true
+    security_opt:
+      - "no-new-privileges:true"
+    # CRITIQUE : pas de bind-mount ni de volume persistant en production ! Le
+    # code applicatif reste immuable, figé dans l'image. `read_only: true`
+    # couvre TOUT le système de fichiers racine, y compris les dossiers que
+    # FrankenPHP/Caddy doivent pouvoir écrire (état Caddy sous
+    # XDG_CONFIG_HOME=/config et XDG_DATA_HOME=/data — cf. le Dockerfile —,
+    # ainsi que var/cache et var/log si un adaptateur fichier est un jour
+    # configuré) : les seules entrées ci-dessous sont donc des tmpfs éphémères
+    # (jamais persistés au redémarrage), `mode: 1777` posé explicitement — le
+    # mode par défaut d'un tmpfs Docker n'est PAS garanti world-writable
+    # (vérifié : sans ce réglage, Caddy échoue avec « permission denied » sous
+    # l'utilisateur non-root dédié).
+    volumes:
+      - type: tmpfs
+        target: /tmp
+        tmpfs:
+          mode: 1777
+      - type: tmpfs
+        target: /config
+        tmpfs:
+          mode: 1777
+      - type: tmpfs
+        target: /data
+        tmpfs:
+          mode: 1777
+      - type: tmpfs
+        target: /app/var
+        tmpfs:
+          mode: 1777
     # Variables d'environnement de production.
     environment:
       # Utiliser le vrai nom de domaine (transmis via variable d'environnement, sinon localhost).

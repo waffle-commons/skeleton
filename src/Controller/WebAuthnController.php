@@ -36,7 +36,6 @@ use function random_bytes;
  * `#[PublicAccess]` : l'émission d'options précède toute identité (opt-out ABAC).
  */
 #[Route(path: '/', name: 'webauthn_')]
-#[PublicAccess]
 final class WebAuthnController extends BaseController
 {
     /**
@@ -45,6 +44,7 @@ final class WebAuthnController extends BaseController
      * @throws RenderingException
      */
     #[Route(path: 'webauthn/register-start', methods: [Routing::METHOD_POST], name: 'register_start')]
+    #[PublicAccess]
     public function registerStart(WebAuthnCeremony $ceremony): ResponseInterface
     {
         // Handle utilisateur opaque et stable (jamais une PII / un email).
@@ -66,6 +66,7 @@ final class WebAuthnController extends BaseController
      * @throws RenderingException
      */
     #[Route(path: 'webauthn/assert-start', methods: [Routing::METHOD_POST], name: 'assert_start')]
+    #[PublicAccess]
     public function assertStart(WebAuthnCeremony $ceremony, InMemoryChallengeStore $challenges): ResponseInterface
     {
         // Connexion sans nom d'utilisateur (discoverable) : passkeys non restreintes.

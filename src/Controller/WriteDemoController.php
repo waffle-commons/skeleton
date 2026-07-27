@@ -30,13 +30,13 @@ use Waffle\Exception\RenderingException;
  * `#[PublicAccess]` : démo sans autorisation (opt-out ABAC explicite).
  */
 #[Route(path: '/', name: 'write_demo_')]
-#[PublicAccess]
 final class WriteDemoController extends BaseController
 {
     /**
      * @throws RenderingException
      */
     #[Route(path: 'write/demo', methods: [Routing::METHOD_POST], name: 'demo')]
+    #[PublicAccess]
     public function write(RelationalConnectionPoolInterface $pool): ResponseInterface
     {
         // Connexion épinglée par le middleware pour toute la requête d'écriture :
