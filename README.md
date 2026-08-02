@@ -11,7 +11,7 @@ The official starting point for building robust, secure, and high-performance ap
 <a href="./LICENSE.md"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
 </p>
 
-> **Release:** `0.1.0-beta5` &nbsp;|&nbsp; PHP 8.5+ · FrankenPHP worker mode
+> **Release:** `0.1.0-beta6` &nbsp;|&nbsp; PHP 8.5+ · FrankenPHP worker mode
 
 Welcome to the **Waffle Skeleton**, the official starting point for building robust, secure, and high-performance applications with the [Waffle Ecosystem](https://github.com/waffle-commons).
 
