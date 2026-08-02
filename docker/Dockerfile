@@ -21,6 +21,11 @@ ENV APP_ENV=prod \
 
 # Install system dependencies and common PHP extensions
 # libyaml-dev is required for Waffle's native yaml extension
+# pdo_pgsql / pdo_mysql back `waffle.database.driver` (config/app.yaml): without
+# a PDO driver the connection pool cannot open a socket and every DB-backed
+# route fails with "Failed to establish a database connection" — the image only
+# ships pdo_sqlite otherwise. Keep this list in sync with the drivers the
+# template documents.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     acl \
     file \
@@ -34,6 +39,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         gd \
         intl \
         opcache \
+        pdo_pgsql \
+        pdo_mysql \
         zip \
         yaml \
     && echo "apc.enable_cli=1" >> "$PHP_INI_DIR/conf.d/docker-php-ext-apcu.ini" \
