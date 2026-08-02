@@ -120,6 +120,12 @@ use Waffle\Service\ReflectionService;
 final class AppKernelFactory
 {
     /**
+     * BENCH-04 : plafond par défaut du pool PDO, aligné sur le défaut historique
+     * de PDOConnectionPool (utilisé quand DB_POOL_SIZE est absente ou invalide).
+     */
+    private const int DEFAULT_POOL_SIZE = 8;
+
+    /**
      * Construit le Kernel entièrement assemblé.
      */
     public static function create(string $env = Constant::ENV_PROD, bool $debug = false): KernelInterface
@@ -211,6 +217,18 @@ final class AppKernelFactory
         // dans TrustedHostMiddleware (RFC-003 §3.2).
         /** @var list<string> $trustedHosts */
         $trustedHosts = $config->getArray(key: 'waffle.trusted_hosts') ?? [];
+        // Surcharge par l'environnement : TRUSTED_HOSTS (liste d'hôtes séparés
+        // par des virgules) permet à l'orchestrateur (Docker/K8s, harnais de
+        // bench) de piloter l'allow-list sans toucher app.yaml — même flux que
+        // les autres valeurs pilotées par l'env (le registre .env + process,
+        // où le process l'emporte). Absente ou vide ⇒ défaut app.yaml préservé.
+        $trustedHostsOverride = $envRegistry['TRUSTED_HOSTS'] ?? null;
+        if (is_string($trustedHostsOverride) && mb_trim($trustedHostsOverride) !== '') {
+            $trustedHosts = array_values(array_filter(
+                array_map(mb_trim(...), explode(',', $trustedHostsOverride)),
+                static fn(string $host): bool => $host !== '',
+            ));
+        }
 
         // SEC-01 (Beta-1, option C) : gestionnaire CSRF sans état, basé sur un HMAC
         // lié à un SID anonyme par navigateur. Le secret vient de la config (avec
@@ -257,6 +275,13 @@ final class AppKernelFactory
         // 4. Décoration du container par le SecureContainer. Le SecurityContext
         // (alimenté par le pont d'authentification ci-dessus) est injecté pour que
         // les voters #[Voter] reçoivent l'identité authentifiée (AUTHZ-01).
+        // SEC-05 : le SecureContainer accepte un SubjectResolverInterface optionnel
+        // (résolution paresseuse, conditionnée aux voters, fail-closed). Le squelette
+        // ne câble AUCUN résolveur par défaut : vos voters reçoivent la requête
+        // PSR-7 tant que vous n'avez pas implémenté votre propre résolveur qui
+        // hydrate une entité métier (voir l'exemple commenté ci-dessous et
+        // `App\Security\RouteParamSubjectResolver`).
+        //     subjectResolver: new \App\Security\RouteParamSubjectResolver(),
         /** @var SecurityContextInterface $securityContext */
         $securityContext = $container->get(SecurityContextInterface::class);
         $secureContainer = new SecureContainer($container, $security, $securityContext);
@@ -399,7 +424,11 @@ final class AppKernelFactory
             // Création du middleware de pont et ajout dans le stack.
             // Il relie le Router au pipeline.
             $routingMiddleware = new CoreRoutingMiddleware($router, $responseFactory);
-            // Il relie le SecureMiddleware au pipeline.
+            // Il relie le SecureMiddleware au pipeline. SEC-05 : la résolution du
+            // sujet de décision vit désormais DANS le SecureContainer (injectée à
+            // sa construction, paresseuse et conditionnée aux voters) — la
+            // middleware se contente de déclencher l'analyse et de journaliser
+            // les refus, y compris un échec fail-closed du résolveur.
             $secureMiddleware = new SecurityMiddleware(secureContainer: $secureContainer, logger: $secureLogger);
             $stack->add(middleware: $routingMiddleware);
             // Le CsrfMiddleware doit s'exécuter après Routing (il lit `_classname`
@@ -728,29 +757,14 @@ final class AppKernelFactory
     }
 
     /**
-     * Construit le pool de connexions PDO (RFC-022) à partir de `waffle.database.*`.
-     *
-     * La fabrique injectée n'ouvre une connexion que lorsque le pool en a besoin :
-     * en mode worker FrankenPHP, les sockets restent tièdes entre les requêtes,
-     * sont sondés (« ping-before-dispense ») puis reconnectés de façon transparente.
+     * Construit le pool de connexions PDO (RFC-022) — délégué à la fabrique
+     * dédiée {@see ConnectionPoolFactory} (DSN par moteur, taille pilotée par
+     * DB_POOL_SIZE) ; conservé ici pour l'API publique historique (bin/waffle).
      */
     public static function buildConnectionPool(
         Config $config,
         ?ConnectionTrackerInterface $tracker = null,
     ): PDOConnectionPool {
-        $driver = $config->getString('waffle.database.driver') ?? 'mysql';
-        $host = $config->getString('waffle.database.host') ?? '127.0.0.1';
-        $port = $config->getString('waffle.database.port') ?? '3306';
-        $database = $config->getString('waffle.database.database') ?? '';
-        $username = $config->getString('waffle.database.username') ?? 'root';
-        $password = $config->getString('waffle.database.password') ?? '';
-        $charset = $config->getString('waffle.database.charset') ?? 'utf8mb4';
-
-        $dsn = sprintf('%s:host=%s;port=%s;dbname=%s;charset=%s', $driver, $host, $port, $database, $charset);
-
-        // Fabrique sans état, rejouée à chaque création de connexion par le pool.
-        return new PDOConnectionPool(factory: static fn(): PDO => new PDO($dsn, $username, $password, [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        ]), tracker: $tracker);
+        return ConnectionPoolFactory::create($config, $tracker);
     }
 }
