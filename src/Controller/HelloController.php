@@ -83,7 +83,10 @@ final class HelloController extends BaseController
      * exception levée est interceptée puis rendue en JSON structuré par le
      * middleware d'erreur.
      */
+    // Vitrine publique : l'ABAC est fail-closed, donc une action sans #[Voter]
+    // est refusée (403) avant d'atteindre la démonstration d'erreur.
     #[Route(path: 'crash', name: 'crash')]
+    #[PublicAccess]
     public function crash(): ResponseInterface
     {
         throw new RuntimeException('Quelque chose s\'est mal passé pendant la salutation !');

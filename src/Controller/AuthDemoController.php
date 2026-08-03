@@ -12,6 +12,7 @@ use Waffle\Commons\Contracts\Auth\UserIdentityInterface;
 use Waffle\Commons\Contracts\Config\ConfigInterface;
 use Waffle\Commons\Contracts\Routing\Attribute\Route;
 use Waffle\Commons\Contracts\Routing\Constant as Routing;
+use Waffle\Commons\Contracts\Security\Attribute\PublicAccess;
 use Waffle\Core\BaseController;
 use Waffle\Exception\RenderingException;
 
@@ -40,7 +41,9 @@ final class AuthDemoController extends BaseController
      *
      * @throws RenderingException
      */
+    // Doit rester joignable sans jeton : c'est l'action qui en délivre un.
     #[Route(path: 'auth/demo-token', methods: [Routing::METHOD_POST], name: 'token')]
+    #[PublicAccess]
     public function demoToken(ConfigInterface $config): ResponseInterface
     {
         $secret = (string) $config->getString('waffle.auth.secret');
@@ -85,7 +88,13 @@ final class AuthDemoController extends BaseController
      * @throws AuthenticationException Si aucune identité vérifiée n'est présente (401).
      * @throws RenderingException
      */
+    // `#[PublicAccess]` lève la garde d'AUTORISATION (aucun #[Voter] à évaluer) ;
+    // l'AUTHENTIFICATION reste appliquée par l'action elle-même, qui lève une
+    // AuthenticationException (401) sans identité. Sans cet opt-out, le
+    // SecureContainer répondait 403 avant même d'exécuter ce contrôle — la démo
+    // du pont d'authentification était donc inatteignable, jeton valide ou non.
     #[Route(path: 'api/me', methods: [Routing::METHOD_GET], name: 'me')]
+    #[PublicAccess]
     public function me(ServerRequestInterface $request): ResponseInterface
     {
         $identity = $request->getAttribute(AuthConstant::REQUEST_ATTRIBUTE);
