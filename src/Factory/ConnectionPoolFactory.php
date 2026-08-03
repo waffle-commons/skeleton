@@ -91,7 +91,21 @@ final class ConnectionPoolFactory
             'sqlite' => sprintf('sqlite:%s', $database),
             'sqlsrv' => sprintf('sqlsrv:Server=%s,%s;Database=%s', $host, $port, $database),
             'oci' => sprintf('oci:dbname=//%s:%s/%s;charset=%s', $host, $port, $database, $charset),
-            default => sprintf('mysql:host=%s;port=%s;dbname=%s;charset=%s', $host, $port, $database, $charset),
+            // MariaDB shares MySQL's DSN grammar, so both are named explicitly
+            // rather than relying on the fallback.
+            'mysql', 'mariadb' => sprintf(
+                'mysql:host=%s;port=%s;dbname=%s;charset=%s',
+                $host,
+                $port,
+                $database,
+                $charset,
+            ),
+            // Any other PDO driver gets the common `driver:host=…` shape with
+            // ITS OWN name. The previous fallback emitted a `mysql:` DSN for
+            // every unrecognised value, so a typo like `postgres` silently
+            // produced a MySQL connection attempt and failed somewhere far from
+            // the mistake.
+            default => sprintf('%s:host=%s;port=%s;dbname=%s', $driver, $host, $port, $database),
         };
     }
 }
