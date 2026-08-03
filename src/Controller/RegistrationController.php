@@ -33,7 +33,7 @@ final class RegistrationController extends BaseController
     // Inscription publique : aucune identité n'existe encore au moment de
     // l'appel, donc aucun #[Voter] ne peut décider — l'opt-out explicite est la
     // seule façon d'atteindre l'action sous l'ABAC fail-closed.
-    #[Route(path: 'register', name: 'register')]
+    #[Route(path: 'register', methods: ['POST'], name: 'register')]
     #[PublicAccess]
     public function register(RegistrationInput $input): ResponseInterface
     {

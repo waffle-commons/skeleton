@@ -10,8 +10,10 @@ use Waffle\Commons\Auth\Exception\AuthenticationException;
 use Waffle\Commons\Contracts\Auth\Constant as AuthConstant;
 use Waffle\Commons\Contracts\Auth\UserIdentityInterface;
 use Waffle\Commons\Contracts\Config\ConfigInterface;
+use Waffle\Commons\Contracts\Constant\Constant;
 use Waffle\Commons\Contracts\Routing\Attribute\Route;
 use Waffle\Commons\Contracts\Routing\Constant as Routing;
+use Waffle\Commons\Contracts\Routing\Exception\RouteNotFoundException;
 use Waffle\Commons\Contracts\Security\Attribute\PublicAccess;
 use Waffle\Core\BaseController;
 use Waffle\Exception\RenderingException;
@@ -41,11 +43,23 @@ final class AuthDemoController extends BaseController
      *
      * @throws RenderingException
      */
-    // Doit rester joignable sans jeton : c'est l'action qui en délivre un.
+    // `#[PublicAccess]` est indispensable — c'est l'action qui délivre le jeton,
+    // elle ne peut donc pas en exiger un. Mais elle SIGNE avec le secret de
+    // production du pont : laissée joignable en production, elle serait une
+    // fabrique de jetons anonyme. Elle est donc refusée hors développement
+    // (voir le garde ci-dessous), et une vraie application supprime purement et
+    // simplement cette route au profit de son IdP.
     #[Route(path: 'auth/demo-token', methods: [Routing::METHOD_POST], name: 'token')]
     #[PublicAccess]
     public function demoToken(ConfigInterface $config): ResponseInterface
     {
+        // Fail-closed : hors `dev`, cette route n'existe pas. Le 404 (plutôt
+        // qu'un 403) évite de révéler qu'un émetteur de jetons est présent dans
+        // le binaire déployé.
+        if ($config->getString('waffle.env') !== Constant::ENV_DEV) {
+            throw new RouteNotFoundException('No route found for "POST /auth/demo-token".');
+        }
+
         $secret = (string) $config->getString('waffle.auth.secret');
         $now = time();
 
