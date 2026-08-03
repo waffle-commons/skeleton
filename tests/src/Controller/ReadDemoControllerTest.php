@@ -26,7 +26,7 @@ use Waffle\Commons\Http\Factory\ResponseFactory;
  */
 final class ReadDemoControllerTest extends AbstractTestCase
 {
-    private const string EXPECTED_SQL = 'SELECT id, email, created_at FROM users WHERE id = ?';
+    private const string EXPECTED_SQL = 'SELECT id, created_at FROM users WHERE id = ?';
 
     private function controller(): ReadDemoController
     {

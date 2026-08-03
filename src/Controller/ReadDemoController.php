@@ -50,7 +50,7 @@ final class ReadDemoController extends BaseController
         }
 
         $pdo = $pool->acquire()->pdo();
-        $statement = $pdo->prepare('SELECT id, email, created_at FROM users WHERE id = ?');
+        $statement = $pdo->prepare('SELECT id, created_at FROM users WHERE id = ?');
 
         $user = null;
         if ($statement !== false && $statement->execute([$id])) {

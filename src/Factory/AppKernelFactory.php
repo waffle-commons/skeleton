@@ -199,9 +199,28 @@ final class AppKernelFactory
         try {
             $config = new Config(configDir: $rootConfig, environment: $env, env: $envRegistry);
         } catch (InvalidConfigurationException $e) {
-            new StreamLogger(channel: LogChannel::CORE)->critical('Configuration failed to load; falling back to Failsafe defaults.', [
+            // FAIL CLOSED IN PRODUCTION. Failsafe::ENABLED discards the ENTIRE
+            // configuration, which includes `trusted_hosts`, the CORS allow-list,
+            // the SecureContainer level and the CSRF/auth secrets — so booting a
+            // production worker on defaults after a malformed YAML would silently
+            // run a security-degraded application. That also re-opens exactly what
+            // FIX-01 #12 closed when it stopped YamlParser swallowing this error.
+            // Outside production the fallback stays: a developer wants the app to
+            // start and tell them what is wrong, not a dead worker.
+            new StreamLogger(channel: LogChannel::CORE)->critical('Configuration failed to load.', [
                 'exception' => $e->getMessage(),
+                'env' => $env,
             ]);
+
+            if ($env === Constant::ENV_PROD) {
+                throw new RuntimeException(
+                    'Configuration invalide en production : le démarrage est refusé (fail-closed). '
+                    . 'Corrigez config/app.yaml — un repli sur les défauts désactiverait les hôtes de '
+                    . 'confiance, la liste blanche CORS et le niveau de sécurité du SecureContainer.',
+                    previous: $e,
+                );
+            }
+
             $config = new Config(
                 configDir: $rootConfig,
                 environment: $env,
