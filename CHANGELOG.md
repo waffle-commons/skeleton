@@ -5,9 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Released in lockstep with the Waffle Commons umbrella tag.
 
-## [0.1.0-beta6] — 2026-08-03
+## [0.1.0-beta6] — 2026-08-22
 
 **Theme: audit remediation, and the template defects a real benchmark exposed.**
+
+### Fixed
+- `apcu_enabled()` is called behind a `function_exists()` guard. Without APCu the documented no-op fallback (`NullMetricsRegistry`) could never be reached — the kernel fatalled with `Call to undefined function apcu_enabled()` instead.
+- **`composer.lock` is no longer shipped.** As the `composer create-project` target, a committed lock pinned every new application to the component SHAs frozen at release time — `create-project` at the beta6 tag would have installed beta5 framework code, without any of the audit remediations. The lock is now gitignored, so `self.version` resolves each `waffle-commons/*` package to the skeleton's own tag (matching `symfony/skeleton`).
 
 ### Fixed
 - **The production image shipped no PostgreSQL or MySQL PDO driver.** The template

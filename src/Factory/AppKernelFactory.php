@@ -325,7 +325,9 @@ final class AppKernelFactory
         //     bearer token au MetricsMiddleware pour autoriser un scrape distant. Le
         //     TracingMiddleware ouvre le span serveur racine (extraction du `traceparent`
         //     entrant) et compte requêtes + durées (no-op tant que le tracer est le NullTracer).
-        $metricsRegistry = apcu_enabled() ? new MetricsRegistry(new ApcuMetricStore()) : new NullMetricsRegistry();
+        $metricsRegistry = ApcuMetricStore::isAvailable()
+            ? new MetricsRegistry(new ApcuMetricStore())
+            : new NullMetricsRegistry();
         $container->set(MetricsRegistryInterface::class, $metricsRegistry);
 
         $collectors = [new MemoryCollector(), new GcCollector(), new PoolUtilizationCollector()];
