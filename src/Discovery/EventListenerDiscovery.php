@@ -108,7 +108,11 @@ final class EventListenerDiscovery
                 if ($part === ';' || $part === '{') {
                     break;
                 }
-                if (is_array($part)) {
+                // Le blanc qui suit `namespace` est un token à part entière :
+                // l'agréger produirait un FQCN préfixé d'une espace, que
+                // `class_exists()` ne résout pas — l'écouteur serait alors
+                // silencieusement ignoré.
+                if (is_array($part) && $part[0] !== T_WHITESPACE) {
                     $namespace .= $part[1];
                 }
             }

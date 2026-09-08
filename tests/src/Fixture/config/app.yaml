@@ -1,0 +1,14 @@
+# Configuration de FIXTURE : la grammaire des DSN de ConnectionPoolFactory est
+# testée par moteur, donc chaque valeur `waffle.database.*` est interpolée depuis
+# le registre d'environnement injecté dans Config par le test.
+waffle:
+  env: 'test'
+  database:
+    driver: '%env(DB_DRIVER)%'
+    host: '%env(DB_HOST)%'
+    port: '%env(DB_PORT)%'
+    database: '%env(DB_DATABASE)%'
+    username: '%env(DB_USERNAME)%'
+    password: '%env(DB_PASSWORD)%'
+    charset: '%env(DB_CHARSET)%'
+    pool_size: '%env(DB_POOL_SIZE)%'

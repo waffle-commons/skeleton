@@ -10,6 +10,14 @@ Released in lockstep with the Waffle Commons umbrella tag.
 **Theme: audit remediation, and the template defects a real benchmark exposed.**
 
 ### Fixed
+- **Event-listener discovery registered nothing.** `EventListenerDiscovery` built each
+  candidate FQCN by concatenating the tokens that follow `namespace`, whitespace
+  included — so every namespaced listener resolved as `" App\…\Listener"`, with a
+  leading space, which `class_exists()` never matches. Every discovered listener was
+  therefore skipped in silence: an application dropping a `#[AsEventListener]` class
+  into the configured directory saw it simply never fire. The scanner now ignores
+  whitespace tokens (the framework's own `Waffle\Commons\Utils\Service\ClassParser`
+  already did). Found by covering the class with tests for the first time.
 - `apcu_enabled()` is called behind a `function_exists()` guard. Without APCu the documented no-op fallback (`NullMetricsRegistry`) could never be reached — the kernel fatalled with `Call to undefined function apcu_enabled()` instead.
 - **`composer.lock` is no longer shipped.** As the `composer create-project` target, a committed lock pinned every new application to the component SHAs frozen at release time — `create-project` at the beta6 tag would have installed beta5 framework code, without any of the audit remediations. The lock is now gitignored, so `self.version` resolves each `waffle-commons/*` package to the skeleton's own tag (matching `symfony/skeleton`).
 

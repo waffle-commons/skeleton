@@ -6,9 +6,12 @@ namespace AppTests\Factory;
 
 use App\Factory\ConnectionPoolFactory;
 use AppTests\AbstractTestCase;
+use PDO;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Waffle\Commons\Config\Config;
 use Waffle\Commons\Contracts\Constant\Constant;
+use Waffle\Commons\Data\Connection\PDOConnectionPool;
 
 /**
  * BENCH-04 : la taille du pool PDO est pilotée par DB_POOL_SIZE, qui suit le
@@ -54,5 +57,73 @@ final class ConnectionPoolFactoryTest extends AbstractTestCase
         self::assertSame(8, ConnectionPoolFactory::resolvePoolSize(self::configWithEnv(['DB_POOL_SIZE' => '-4'])));
         self::assertSame(8, ConnectionPoolFactory::resolvePoolSize(self::configWithEnv(['DB_POOL_SIZE' => 'huit'])));
         self::assertSame(8, ConnectionPoolFactory::resolvePoolSize(self::configWithEnv(['DB_POOL_SIZE' => ''])));
+    }
+
+    /**
+     * Configuration de fixture dont chaque valeur `waffle.database.*` est
+     * interpolée depuis le registre d'environnement : un seul fichier suffit
+     * pour couvrir la grammaire de DSN de tous les moteurs.
+     *
+     * @param array<string, string> $env
+     */
+    private static function configWithFixture(array $env): Config
+    {
+        return new Config(configDir: __DIR__ . '/../Fixture/config', environment: Constant::ENV_DEV, env: $env);
+    }
+
+    /**
+     * Chaque moteur a sa propre grammaire de DSN (RFC-022). Un moteur inconnu ne
+     * doit PLUS retomber sur la forme MySQL — c'est le correctif beta6 : une
+     * faute de frappe comme « postgres » produisait silencieusement une tentative
+     * de connexion MySQL, qui échouait loin de la cause.
+     *
+     * @return iterable<string, array{string}>
+     */
+    public static function drivers(): iterable
+    {
+        yield 'postgresql' => ['pgsql'];
+        yield 'mysql' => ['mysql'];
+        yield 'mariadb' => ['mariadb'];
+        yield 'sqlserver' => ['sqlsrv'];
+        yield 'oracle' => ['oci'];
+        yield 'moteur inconnu' => ['postgres'];
+    }
+
+    #[Test]
+    #[DataProvider('drivers')]
+    public function the_pool_is_built_lazily_for_every_engine(string $driver): void
+    {
+        $pool = ConnectionPoolFactory::create(self::configWithFixture([
+            'DB_DRIVER' => $driver,
+            'DB_HOST' => 'db.internal',
+            'DB_PORT' => '5432',
+            'DB_DATABASE' => 'waffle_test',
+            'DB_USERNAME' => 'waffle',
+            'DB_CHARSET' => 'utf8',
+        ]));
+
+        // Paresseux par construction : le DSN est assemblé, mais AUCUNE socket
+        // n'est ouverte tant que le pool ne distribue pas de connexion.
+        self::assertInstanceOf(PDOConnectionPool::class, $pool);
+        self::assertSame(0, $pool->idleCount());
+        self::assertSame(0, $pool->activeCount());
+    }
+
+    #[Test]
+    public function the_sqlite_dsn_actually_opens_a_connection(): void
+    {
+        // SQLite en mémoire prouve la grammaire de bout en bout : si le DSN était
+        // faux, `acquire()` lèverait au lieu de rendre un PDO utilisable.
+        $pool = ConnectionPoolFactory::create(self::configWithFixture([
+            'DB_DRIVER' => 'sqlite',
+            'DB_DATABASE' => ':memory:',
+        ]));
+
+        $pdo = $pool->acquire()->pdo();
+
+        self::assertSame('sqlite', $pdo->getAttribute(PDO::ATTR_DRIVER_NAME));
+        self::assertSame(1, $pool->activeCount());
+
+        $pool->reset();
     }
 }
