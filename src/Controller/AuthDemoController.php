@@ -10,8 +10,11 @@ use Waffle\Commons\Auth\Exception\AuthenticationException;
 use Waffle\Commons\Contracts\Auth\Constant as AuthConstant;
 use Waffle\Commons\Contracts\Auth\UserIdentityInterface;
 use Waffle\Commons\Contracts\Config\ConfigInterface;
+use Waffle\Commons\Contracts\Constant\Constant;
 use Waffle\Commons\Contracts\Routing\Attribute\Route;
 use Waffle\Commons\Contracts\Routing\Constant as Routing;
+use Waffle\Commons\Contracts\Routing\Exception\RouteNotFoundException;
+use Waffle\Commons\Contracts\Security\Attribute\PublicAccess;
 use Waffle\Core\BaseController;
 use Waffle\Exception\RenderingException;
 
@@ -40,9 +43,23 @@ final class AuthDemoController extends BaseController
      *
      * @throws RenderingException
      */
+    // `#[PublicAccess]` est indispensable — c'est l'action qui délivre le jeton,
+    // elle ne peut donc pas en exiger un. Mais elle SIGNE avec le secret de
+    // production du pont : laissée joignable en production, elle serait une
+    // fabrique de jetons anonyme. Elle est donc refusée hors développement
+    // (voir le garde ci-dessous), et une vraie application supprime purement et
+    // simplement cette route au profit de son IdP.
     #[Route(path: 'auth/demo-token', methods: [Routing::METHOD_POST], name: 'token')]
+    #[PublicAccess]
     public function demoToken(ConfigInterface $config): ResponseInterface
     {
+        // Fail-closed : hors `dev`, cette route n'existe pas. Le 404 (plutôt
+        // qu'un 403) évite de révéler qu'un émetteur de jetons est présent dans
+        // le binaire déployé.
+        if ($config->getString('waffle.env') !== Constant::ENV_DEV) {
+            throw new RouteNotFoundException('No route found for "POST /auth/demo-token".');
+        }
+
         $secret = (string) $config->getString('waffle.auth.secret');
         $now = time();
 
@@ -85,7 +102,13 @@ final class AuthDemoController extends BaseController
      * @throws AuthenticationException Si aucune identité vérifiée n'est présente (401).
      * @throws RenderingException
      */
+    // `#[PublicAccess]` lève la garde d'AUTORISATION (aucun #[Voter] à évaluer) ;
+    // l'AUTHENTIFICATION reste appliquée par l'action elle-même, qui lève une
+    // AuthenticationException (401) sans identité. Sans cet opt-out, le
+    // SecureContainer répondait 403 avant même d'exécuter ce contrôle — la démo
+    // du pont d'authentification était donc inatteignable, jeton valide ou non.
     #[Route(path: 'api/me', methods: [Routing::METHOD_GET], name: 'me')]
+    #[PublicAccess]
     public function me(ServerRequestInterface $request): ResponseInterface
     {
         $identity = $request->getAttribute(AuthConstant::REQUEST_ATTRIBUTE);

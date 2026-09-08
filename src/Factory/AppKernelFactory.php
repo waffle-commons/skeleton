@@ -35,6 +35,7 @@ use Waffle\Commons\Auth\WebAuthn\WebAuthnLibAdapter;
 use Waffle\Commons\Cache\Factory\CacheFactory;
 use Waffle\Commons\Config\Config;
 use Waffle\Commons\Config\DotEnv;
+use Waffle\Commons\Config\Exception\InvalidConfigurationException;
 use Waffle\Commons\Container\Container;
 use Waffle\Commons\Contracts\Async\TaskRunnerInterface;
 use Waffle\Commons\Contracts\Auth\AuthenticationBridgeInterface;
@@ -51,6 +52,7 @@ use Waffle\Commons\Contracts\Data\Connection\ConnectionPoolInterface;
 use Waffle\Commons\Contracts\Data\Connection\ConnectionTrackerInterface;
 use Waffle\Commons\Contracts\Data\Connection\RelationalConnectionPoolInterface;
 use Waffle\Commons\Contracts\Data\Migration\MigrationRunnerInterface;
+use Waffle\Commons\Contracts\Enum\Failsafe;
 use Waffle\Commons\Contracts\Handler\ArgumentResolverInterface;
 use Waffle\Commons\Contracts\HttpClient\ConcurrentClientInterface;
 use Waffle\Commons\Contracts\Reactive\BroadcastBufferInterface;
@@ -118,10 +120,24 @@ use Waffle\Service\ReflectionService;
 final class AppKernelFactory
 {
     /**
+     * BENCH-04 : plafond par défaut du pool PDO, aligné sur le défaut historique
+     * de PDOConnectionPool (utilisé quand DB_POOL_SIZE est absente ou invalide).
+     */
+    private const int DEFAULT_POOL_SIZE = 8;
+
+    /**
      * Construit le Kernel entièrement assemblé.
      */
     public static function create(string $env = Constant::ENV_PROD, bool $debug = false): KernelInterface
     {
+        // FIX-01 #9 (Beta6 audit) : avortement fail-closed si la production et le
+        // mode debug coïncident — même discipline que resolveCsrfSecret() /
+        // resolveAuthSecret() ci-dessous. $debug fait fuiter des traces d'erreur
+        // détaillées (JsonErrorRenderer) : jamais acceptable en production, même
+        // par erreur de configuration (.env livre APP_DEBUG=true par défaut pour
+        // le confort du développement local).
+        self::assertNotDebugInProduction($env, $debug);
+
         /** @var string $root */
         $root = APP_ROOT;
         $rootConfig = $root . DIRECTORY_SEPARATOR . APP_CONFIG;
@@ -174,7 +190,44 @@ final class AppKernelFactory
         $envRegistry = array_merge(new DotEnv($root)->load(), $processEnv);
 
         // 3. Instanciation de la Config concrète (paquet waffle-commons/config).
-        $config = new Config(configDir: $rootConfig, environment: $env, env: $envRegistry);
+        // FIX-01 (Beta6 audit) : une config malformée ne doit pas traverser le
+        // boot du kernel sans être rattrapée — l'ErrorHandlerMiddleware n'existe
+        // pas encore à ce stade du pipeline. On retente avec Failsafe::ENABLED
+        // (défauts minimaux sûrs) pour que le boot aboutisse et que l'app puisse
+        // au moins démarrer et journaliser le vrai problème, plutôt que le worker
+        // ne meure sur une exception non gérée.
+        try {
+            $config = new Config(configDir: $rootConfig, environment: $env, env: $envRegistry);
+        } catch (InvalidConfigurationException $e) {
+            // FAIL CLOSED IN PRODUCTION. Failsafe::ENABLED discards the ENTIRE
+            // configuration, which includes `trusted_hosts`, the CORS allow-list,
+            // the SecureContainer level and the CSRF/auth secrets — so booting a
+            // production worker on defaults after a malformed YAML would silently
+            // run a security-degraded application. That also re-opens exactly what
+            // FIX-01 #12 closed when it stopped YamlParser swallowing this error.
+            // Outside production the fallback stays: a developer wants the app to
+            // start and tell them what is wrong, not a dead worker.
+            new StreamLogger(channel: LogChannel::CORE)->critical('Configuration failed to load.', [
+                'exception' => $e->getMessage(),
+                'env' => $env,
+            ]);
+
+            if ($env === Constant::ENV_PROD) {
+                throw new RuntimeException(
+                    'Configuration invalide en production : le démarrage est refusé (fail-closed). '
+                    . 'Corrigez config/app.yaml — un repli sur les défauts désactiverait les hôtes de '
+                    . 'confiance, la liste blanche CORS et le niveau de sécurité du SecureContainer.',
+                    previous: $e,
+                );
+            }
+
+            $config = new Config(
+                configDir: $rootConfig,
+                environment: $env,
+                failsafe: Failsafe::ENABLED,
+                env: $envRegistry,
+            );
+        }
         // Exposée dans le conteneur pour l'injection dans les contrôleurs
         // (ex. AuthDemoController) via le résolveur d'arguments PSR-11.
         $container->set(ConfigInterface::class, $config);
@@ -183,6 +236,18 @@ final class AppKernelFactory
         // dans TrustedHostMiddleware (RFC-003 §3.2).
         /** @var list<string> $trustedHosts */
         $trustedHosts = $config->getArray(key: 'waffle.trusted_hosts') ?? [];
+        // Surcharge par l'environnement : TRUSTED_HOSTS (liste d'hôtes séparés
+        // par des virgules) permet à l'orchestrateur (Docker/K8s, harnais de
+        // bench) de piloter l'allow-list sans toucher app.yaml — même flux que
+        // les autres valeurs pilotées par l'env (le registre .env + process,
+        // où le process l'emporte). Absente ou vide ⇒ défaut app.yaml préservé.
+        $trustedHostsOverride = $envRegistry['TRUSTED_HOSTS'] ?? null;
+        if (is_string($trustedHostsOverride) && mb_trim($trustedHostsOverride) !== '') {
+            $trustedHosts = array_values(array_filter(
+                array_map(mb_trim(...), explode(',', $trustedHostsOverride)),
+                static fn(string $host): bool => $host !== '',
+            ));
+        }
 
         // SEC-01 (Beta-1, option C) : gestionnaire CSRF sans état, basé sur un HMAC
         // lié à un SID anonyme par navigateur. Le secret vient de la config (avec
@@ -229,6 +294,13 @@ final class AppKernelFactory
         // 4. Décoration du container par le SecureContainer. Le SecurityContext
         // (alimenté par le pont d'authentification ci-dessus) est injecté pour que
         // les voters #[Voter] reçoivent l'identité authentifiée (AUTHZ-01).
+        // SEC-05 : le SecureContainer accepte un SubjectResolverInterface optionnel
+        // (résolution paresseuse, conditionnée aux voters, fail-closed). Le squelette
+        // ne câble AUCUN résolveur par défaut : vos voters reçoivent la requête
+        // PSR-7 tant que vous n'avez pas implémenté votre propre résolveur qui
+        // hydrate une entité métier (voir l'exemple commenté ci-dessous et
+        // `App\Security\RouteParamSubjectResolver`).
+        //     subjectResolver: new \App\Security\RouteParamSubjectResolver(),
         /** @var SecurityContextInterface $securityContext */
         $securityContext = $container->get(SecurityContextInterface::class);
         $secureContainer = new SecureContainer($container, $security, $securityContext);
@@ -253,7 +325,9 @@ final class AppKernelFactory
         //     bearer token au MetricsMiddleware pour autoriser un scrape distant. Le
         //     TracingMiddleware ouvre le span serveur racine (extraction du `traceparent`
         //     entrant) et compte requêtes + durées (no-op tant que le tracer est le NullTracer).
-        $metricsRegistry = apcu_enabled() ? new MetricsRegistry(new ApcuMetricStore()) : new NullMetricsRegistry();
+        $metricsRegistry = ApcuMetricStore::isAvailable()
+            ? new MetricsRegistry(new ApcuMetricStore())
+            : new NullMetricsRegistry();
         $container->set(MetricsRegistryInterface::class, $metricsRegistry);
 
         $collectors = [new MemoryCollector(), new GcCollector(), new PoolUtilizationCollector()];
@@ -295,13 +369,19 @@ final class AppKernelFactory
         // ($securityContext est déjà résolu plus haut pour le SecureContainer.)
         $stack->add(middleware: new AnonymousSessionMiddleware($securityContext));
 
+        // Journal du canal SECURITY, partagé par AuthenticationMiddleware,
+        // CsrfMiddleware et SecurityMiddleware — les trois échecs d'autorisation
+        // convergent vers la même piste d'audit (IP + raison), au lieu de finir
+        // en CRITICAL non différencié sur le canal générique app.
+        $secureLogger = new StreamLogger(channel: LogChannel::SECURITY);
+
         // 5a-ter. Pont d'Authentification Universel (RFC-021 §3.2) : authentifie
         // la requête entrante (assertion de passerelle / Bearer JWT), alimente le
         // SecurityContext et publie l'identité vérifiée en attribut
         // `_auth_identity`. Identifiants invalides ⇒ 401/403 fail-closed (rendus
         // par l'ErrorHandler) ; identifiants absents ⇒ requête anonyme (l'ABAC
         // du composant security garde la décision d'accès).
-        $stack->add(middleware: new AuthenticationMiddleware($authBridge));
+        $stack->add(middleware: new AuthenticationMiddleware($authBridge, $secureLogger));
 
         // 5b. Mise en place du dispatcher d'événements.
         $listenerProvider = new ListenerProvider();
@@ -365,13 +445,16 @@ final class AppKernelFactory
             // Création du middleware de pont et ajout dans le stack.
             // Il relie le Router au pipeline.
             $routingMiddleware = new CoreRoutingMiddleware($router, $responseFactory);
-            // Il relie le SecureMiddleware au pipeline.
-            $secureLogger = new StreamLogger(channel: LogChannel::SECURITY);
+            // Il relie le SecureMiddleware au pipeline. SEC-05 : la résolution du
+            // sujet de décision vit désormais DANS le SecureContainer (injectée à
+            // sa construction, paresseuse et conditionnée aux voters) — la
+            // middleware se contente de déclencher l'analyse et de journaliser
+            // les refus, y compris un échec fail-closed du résolveur.
             $secureMiddleware = new SecurityMiddleware(secureContainer: $secureContainer, logger: $secureLogger);
             $stack->add(middleware: $routingMiddleware);
             // Le CsrfMiddleware doit s'exécuter après Routing (il lit `_classname`
             // et `_method` pour repérer #[RequiresCsrfToken]) et avant Security.
-            $stack->add(middleware: new CsrfMiddleware($csrfTokenManager));
+            $stack->add(middleware: new CsrfMiddleware($csrfTokenManager, $secureLogger));
             $stack->add(middleware: $secureMiddleware);
 
             // DBAL-02 : isolation transactionnelle failsafe. APRÈS Security, AVANT
@@ -493,6 +576,28 @@ final class AppKernelFactory
         $container->set(MigrationRunner::class, $migrationRunner);
 
         return $cache;
+    }
+
+    /**
+     * FIX-01 #9 (Beta6 audit) : refuse de démarrer si `$env` vaut `prod` ET que
+     * `$debug` est actif. Ni `AppKernelFactory::create()` ni ses appelants
+     * (`public/index.php`) ne doivent JAMAIS laisser un déploiement réel tourner
+     * avec le mode debug — c'est la fuite d'information la plus élémentaire qui
+     * soit (stack traces, chemins de fichiers, requêtes SQL) rendue publique.
+     * `docker-compose.prod.yml` surcharge déjà `APP_DEBUG=false`, mais rien ne
+     * garantissait jusqu'ici qu'une régression de configuration (orchestrateur
+     * mal renseigné, retour au défaut `.env` `APP_DEBUG=true`) soit interceptée
+     * au boot plutôt que silencieusement servie.
+     */
+    private static function assertNotDebugInProduction(string $env, bool $debug): void
+    {
+        if ($env === Constant::ENV_PROD && $debug === true) {
+            throw new RuntimeException(
+                'APP_DEBUG ne peut pas être actif lorsque APP_ENV=prod : les traces '
+                . 'd\'erreur détaillées exposeraient des informations internes en '
+                . 'production. Positionnez APP_DEBUG=false (ou 0) pour cet environnement.',
+            );
+        }
     }
 
     /**
@@ -673,29 +778,14 @@ final class AppKernelFactory
     }
 
     /**
-     * Construit le pool de connexions PDO (RFC-022) à partir de `waffle.database.*`.
-     *
-     * La fabrique injectée n'ouvre une connexion que lorsque le pool en a besoin :
-     * en mode worker FrankenPHP, les sockets restent tièdes entre les requêtes,
-     * sont sondés (« ping-before-dispense ») puis reconnectés de façon transparente.
+     * Construit le pool de connexions PDO (RFC-022) — délégué à la fabrique
+     * dédiée {@see ConnectionPoolFactory} (DSN par moteur, taille pilotée par
+     * DB_POOL_SIZE) ; conservé ici pour l'API publique historique (bin/waffle).
      */
     public static function buildConnectionPool(
         Config $config,
         ?ConnectionTrackerInterface $tracker = null,
     ): PDOConnectionPool {
-        $driver = $config->getString('waffle.database.driver') ?? 'mysql';
-        $host = $config->getString('waffle.database.host') ?? '127.0.0.1';
-        $port = $config->getString('waffle.database.port') ?? '3306';
-        $database = $config->getString('waffle.database.database') ?? '';
-        $username = $config->getString('waffle.database.username') ?? 'root';
-        $password = $config->getString('waffle.database.password') ?? '';
-        $charset = $config->getString('waffle.database.charset') ?? 'utf8mb4';
-
-        $dsn = sprintf('%s:host=%s;port=%s;dbname=%s;charset=%s', $driver, $host, $port, $database, $charset);
-
-        // Fabrique sans état, rejouée à chaque création de connexion par le pool.
-        return new PDOConnectionPool(factory: static fn(): PDO => new PDO($dsn, $username, $password, [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        ]), tracker: $tracker);
+        return ConnectionPoolFactory::create($config, $tracker);
     }
 }

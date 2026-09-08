@@ -82,12 +82,19 @@ waffle:
   # `migrations_path` est relatif à la racine du projet : lancez `bin/waffle
   # db:migrate` depuis cette racine pour que les scripts SQL soient découverts.
   database:
-    driver: 'mysql'
+    # PostgreSQL par défaut : le service `waffle-postgres` de docker-compose.yml
+    # (postgres:17-alpine) est démarré avec l'application — le squelette est
+    # fonctionnel tel quel. `charset` est ignoré par le DSN pgsql (encodage
+    # client négocié, UTF8) ; il ne sert qu'aux moteurs MySQL/MariaDB/Oracle.
+    driver: 'pgsql'
     host: '%env(DB_HOST)%'
     port: '%env(DB_PORT)%'
     database: '%env(DB_NAME)%'
     username: '%env(DB_USER)%'
     password: '%env(DB_PASSWORD)%'
-    charset: 'utf8mb4'
+    charset: 'utf8'
+    # BENCH-04 : taille du pool pilotable pour le test de saturation. Interpolée
+    # depuis DB_POOL_SIZE (.env / orchestrateur) ; absente ⇒ défaut 8.
+    pool_size: '%env(DB_POOL_SIZE)%'
     migrations_path: 'migrations'
 

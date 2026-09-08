@@ -26,7 +26,6 @@ use Waffle\Exception\RenderingException;
  * `#[PublicAccess]` : démo sans autorisation (opt-out ABAC explicite).
  */
 #[Route(path: '/', name: 'concurrent_demo_')]
-#[PublicAccess]
 final class ConcurrentDemoController extends BaseController
 {
     /** @var list<string> Cibles internes de démonstration (résolues/épinglées par le SsrfGuard). */
@@ -40,6 +39,7 @@ final class ConcurrentDemoController extends BaseController
      * @throws RenderingException
      */
     #[Route(path: 'concurrent/fan-out', methods: [Routing::METHOD_GET], name: 'fan_out')]
+    #[PublicAccess]
     public function fanOut(ConcurrentClientInterface $client, RequestFactoryInterface $requests): ResponseInterface
     {
         $batch = [];

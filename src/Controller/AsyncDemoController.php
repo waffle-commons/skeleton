@@ -27,13 +27,13 @@ use Waffle\Exception\RenderingException;
  * `#[PublicAccess]` : démo sans autorisation (opt-out ABAC explicite).
  */
 #[Route(path: '/', name: 'async_demo_')]
-#[PublicAccess]
 final class AsyncDemoController extends BaseController
 {
     /**
      * @throws RenderingException
      */
     #[Route(path: 'async/audit', methods: [Routing::METHOD_POST], name: 'audit')]
+    #[PublicAccess]
     public function deferAudit(TaskRunnerInterface $runner): ResponseInterface
     {
         $runner->defer(new LogAuditTask(

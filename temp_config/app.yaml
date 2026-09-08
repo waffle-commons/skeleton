@@ -48,11 +48,14 @@ waffle:
     # Valeurs littérales : le pool est paresseux, aucune connexion n'est ouverte
     # au boot ni sur une requête GET (le middleware transactionnel n'enveloppe que
     # les écritures).
-    driver: 'mysql'
+    driver: 'pgsql'
     host: '127.0.0.1'
-    port: '3306'
+    port: '5432'
     database: 'waffle_test'
-    username: 'root'
+    username: 'waffle'
     password: ''
-    charset: 'utf8mb4'
+    charset: 'utf8'
+    # BENCH-04 : interpolée depuis DB_POOL_SIZE — reste `null` (⇒ défaut 8) tant
+    # que la variable n'est pas injectée dans le registre d'env du test.
+    pool_size: '%env(DB_POOL_SIZE)%'
     migrations_path: 'migrations'

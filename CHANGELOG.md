@@ -5,6 +5,72 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Released in lockstep with the Waffle Commons umbrella tag.
 
+## [0.1.0-beta6] — 2026-09
+
+**Theme: audit remediation, and the template defects a real benchmark exposed.**
+
+### Fixed
+- **Event-listener discovery registered nothing.** `EventListenerDiscovery` built each
+  candidate FQCN by concatenating the tokens that follow `namespace`, whitespace
+  included — so every namespaced listener resolved as `" App\…\Listener"`, with a
+  leading space, which `class_exists()` never matches. Every discovered listener was
+  therefore skipped in silence: an application dropping a `#[AsEventListener]` class
+  into the configured directory saw it simply never fire. The scanner now ignores
+  whitespace tokens (the framework's own `Waffle\Commons\Utils\Service\ClassParser`
+  already did). Found by covering the class with tests for the first time.
+- `apcu_enabled()` is called behind a `function_exists()` guard. Without APCu the documented no-op fallback (`NullMetricsRegistry`) could never be reached — the kernel fatalled with `Call to undefined function apcu_enabled()` instead.
+- **`composer.lock` is no longer shipped.** As the `composer create-project` target, a committed lock pinned every new application to the component SHAs frozen at release time — `create-project` at the beta6 tag would have installed beta5 framework code, without any of the audit remediations. The lock is now gitignored, so `self.version` resolves each `waffle-commons/*` package to the skeleton's own tag (matching `symfony/skeleton`).
+
+### Fixed
+- **The production image shipped no PostgreSQL or MySQL PDO driver.** The template
+  configures `waffle.database.*`, provides migrations, wires a connection pool and
+  exposes database-backed demo routes — none of which could work in its own image,
+  which only carried `pdo_sqlite`. Surfaced by running the prod image under load
+  for the first time.
+- **`/greet` and `/register` answered 405 to the calls their own documentation
+  described.** Both hydrate a DTO from the request body but declared no `methods`,
+  so they fell back to the GET/HEAD/OPTIONS default.
+- **Public demo routes returned 403 through the real pipeline.** The SEC-05
+  method-level `#[PublicAccess]` migration missed `/`, `/hello/{name}`, `/greet`,
+  `/crash`, `/register`, `/auth/demo-token` and `/api/me`. Controller tests never
+  caught it because they invoke controllers directly and bypass the pipeline.
+  `/api/me` was the subtle case: it enforces authentication itself, so the
+  auth-bridge demo was unreachable with or without a valid token.
+- **`/auth/demo-token` is now refused outside `dev` (404).** It mints a JWT signed
+  with the production bridge secret; reachable in production it would be an
+  anonymous token factory. A real application deletes the route in favour of its
+  IdP.
+- **A malformed `config/app.yaml` no longer boots production on defaults.** The
+  `Failsafe::ENABLED` retry discards the entire configuration — trusted hosts, the
+  CORS allow-list, the SecureContainer level, the CSRF and auth secrets — so a typo
+  silently started a security-degraded worker. Production now refuses to start and
+  says why; the developer-friendly fallback stays outside production.
+- **The default database pairing could not work:** `driver: mysql` on port 3306
+  with no such service in `docker-compose.yml`, and `.env.example` still pointing
+  at `127.0.0.1:3306`. Now PostgreSQL end to end, with the matching
+  `waffle-postgres` service.
+- An unrecognised `waffle.database.driver` no longer silently builds a MySQL DSN.
+- `APP_ENV=prod` with `APP_DEBUG=true` aborts the boot (FIX-01 #9), and the
+  production image drops root (FIX-01 #13).
+
+### Added
+- `GET /read/demo` — a pooled read counterpart to `/write/demo`, returning
+  `{found, user}` with HTTP 200 on both hit and miss. It deliberately does not
+  select `email`: the route is `#[PublicAccess]`, and a reference template should
+  not model returning PII from an unauthenticated endpoint.
+- `App\Factory\ConnectionPoolFactory` — DSN grammar per engine and pool-size
+  validation extracted from the kernel factory, with the pool ceiling driven by
+  `DB_POOL_SIZE` (default 8).
+- `App\Security\RouteParamSubjectResolver` — an example of the SEC-05
+  object-level ABAC seam, deliberately **not** wired: handing voters the raw
+  route-parameter array as the "domain subject" is a type-confusion footgun in a
+  template. The opt-in is one commented line in `AppKernelFactory`.
+
+### Documentation
+- The README's routing example could not run: it used `method:` (the parameter is
+  `methods`, a list), imported `Route` from the wrong namespace, and omitted
+  `#[PublicAccess]` under fail-closed ABAC.
+
 ## [0.1.0-beta5] — 2026-07-08
 
 **Theme: Beta5 demo app — passkeys, telemetry & APCu.**

@@ -26,7 +26,6 @@ use Waffle\Exception\RenderingException;
  * `#[Voter]`, soit cet opt-out explicite).
  */
 #[Route(path: '/', name: 'reactive_demo_')]
-#[PublicAccess]
 final class ReactiveDemoController extends BaseController
 {
     /**
@@ -37,6 +36,7 @@ final class ReactiveDemoController extends BaseController
      * @throws RenderingException
      */
     #[Route(path: 'reactive/status', methods: [Routing::METHOD_GET], name: 'status')]
+    #[PublicAccess]
     public function status(BroadcastBufferInterface $buffer): ResponseInterface
     {
         return $this->jsonResponse(data: [
@@ -50,6 +50,7 @@ final class ReactiveDemoController extends BaseController
      * @throws RenderingException
      */
     #[Route(path: 'reactive/order', methods: [Routing::METHOD_POST], name: 'order')]
+    #[PublicAccess]
     public function mutateOrder(BroadcastBufferInterface $buffer): ResponseInterface
     {
         // Le DTO reçoit le buffer : chaque transition de `status` (write-hook

@@ -7,6 +7,7 @@ namespace App\Controller;
 use App\Dto\RegistrationInput;
 use Psr\Http\Message\ResponseInterface;
 use Waffle\Commons\Contracts\Routing\Attribute\Route;
+use Waffle\Commons\Contracts\Security\Attribute\PublicAccess;
 use Waffle\Core\BaseController;
 use Waffle\Exception\RenderingException;
 
@@ -29,7 +30,11 @@ final class RegistrationController extends BaseController
      *
      * @throws RenderingException
      */
-    #[Route(path: 'register', name: 'register')]
+    // Inscription publique : aucune identité n'existe encore au moment de
+    // l'appel, donc aucun #[Voter] ne peut décider — l'opt-out explicite est la
+    // seule façon d'atteindre l'action sous l'ABAC fail-closed.
+    #[Route(path: 'register', methods: ['POST'], name: 'register')]
+    #[PublicAccess]
     public function register(RegistrationInput $input): ResponseInterface
     {
         return $this->jsonResponse(data: [

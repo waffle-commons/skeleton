@@ -11,7 +11,7 @@ The official starting point for building robust, secure, and high-performance ap
 <a href="./LICENSE.md"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
 </p>
 
-> **Release:** `0.1.0-beta5` &nbsp;|&nbsp; PHP 8.5+ · FrankenPHP worker mode
+> **Release:** `0.1.0-beta6` &nbsp;|&nbsp; PHP 8.5+ · FrankenPHP worker mode
 
 Welcome to the **Waffle Skeleton**, the official starting point for building robust, secure, and high-performance applications with the [Waffle Ecosystem](https://github.com/waffle-commons).
 
@@ -242,8 +242,8 @@ namespace App\Controller;
 
 use App\Service\Greeter;
 use Psr\Http\Message\ResponseInterface;
-use Waffle\Commons\Routing\Attribute\Argument;
-use Waffle\Commons\Routing\Attribute\Route;
+use Waffle\Commons\Contracts\Routing\Attribute\Route;
+use Waffle\Commons\Contracts\Security\Attribute\PublicAccess;
 use Waffle\Core\BaseController;
 
 class HelloController extends BaseController
@@ -253,7 +253,11 @@ class HelloController extends BaseController
         private Greeter $greeter
     ) {}
 
-    #[Route(path: '/greet/{name}', method: 'GET')]
+    // `methods` is a LIST, and it is optional (defaults to ['GET']).
+    // `#[PublicAccess]` is required: authorization is fail-closed, so an action
+    // carrying no #[Voter] is denied with a 403 unless it opts out explicitly.
+    #[Route(path: '/greet/{name}', methods: ['GET'])]
+    #[PublicAccess]
     public function index(string $name): ResponseInterface
     {
         $message = $this->greeter->sayHello($name);

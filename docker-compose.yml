@@ -26,3 +26,36 @@ services:
       - "443:443/udp"
     # Conservation interactive du conteneur.
     tty: true
+    # L'application se connecte à PostgreSQL via le nom de service (DB_HOST) :
+    # on attend que la base soit réellement prête (healthcheck) avant de démarrer.
+    depends_on:
+      waffle-postgres:
+        condition: service_healthy
+
+  # Base de données PostgreSQL — persistance relationnelle (RFC-022).
+  # L'application s'y connecte via le nom de service (DB_HOST=waffle-postgres) ;
+  # le port 5432 est aussi exposé sur l'hôte pour les sondes manuelles (psql, IDE).
+  waffle-postgres:
+    image: postgres:17-alpine
+    container_name: waffle-postgres
+    environment:
+      # Identifiants de développement local (résolus depuis .env) —
+      # surchargés par l'orchestrateur en production.
+      POSTGRES_DB: "${DB_NAME:-waffle}"
+      POSTGRES_USER: "${DB_USER:-waffle}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:-waffle}"
+    ports:
+      - "5432:5432"
+    volumes:
+      # Volume nommé : les données survivent aux redémarrages du conteneur.
+      - waffle-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      # pg_isready valide que le serveur accepte réellement les connexions.
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-waffle} -d ${DB_NAME:-waffle}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+volumes:
+  waffle-postgres-data:
