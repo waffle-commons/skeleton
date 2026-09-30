@@ -26,6 +26,8 @@ ENV APP_ENV=prod \
 # route fails with "Failed to establish a database connection" — the image only
 # ships pdo_sqlite otherwise. Keep this list in sync with the drivers the
 # template documents.
+# pcntl : signaux POSIX (SIGTERM) pour les consommateurs CLI longue durée — l'arrêt
+# propre de `bin/waffle queue:work` (beta7 [QUEUE-02]) en dépend.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     acl \
     file \
@@ -39,6 +41,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         gd \
         intl \
         opcache \
+        pcntl \
         pdo_pgsql \
         pdo_mysql \
         zip \
