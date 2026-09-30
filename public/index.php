@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
+use App\Factory\AppKernelFactory;
 use Waffle\Commons\Config\DotEnv;
 use Waffle\Commons\Contracts\Constant\Constant;
 use Waffle\Commons\Http\Emitter\ResponseEmitter;
 use Waffle\Commons\Http\Factory\GlobalsFactory;
 use Waffle\Commons\Runtime\WaffleRuntime;
-use App\Factory\AppKernelFactory;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
@@ -32,13 +32,13 @@ $kernel = AppKernelFactory::create(env: $env, debug: $debug);
 // Le runtime orchestre simplement la boucle FrankenPHP [Kernel + Request -> Emitter].
 // STAB-01 : la GlobalsFactory et l'émetteur sont des instances par processus,
 // injectées explicitement dans le runtime (aucun état statique partagé).
-$maxRequests = (int)($_SERVER['MAX_REQUESTS'] ?? 500);
+// MAX_REQUESTS : lu dans le registre d’environnement (processus > .env), comme APP_ENV,
+// jamais dans une superglobale depuis le contrôleur frontal.
+$maxRequests = (int) ($envRegistry['MAX_REQUESTS'] ?? 500);
 // SEC-03 (Beta6 audit) : racine de dépôt des uploads — permet à UploadedFile::
 // moveTo() de vérifier le confinement via Assert::within() plutôt que de se fier
 // uniquement à Assert::safePath() (qui ne rejette que les segments littéraux `..`).
-new WaffleRuntime(new GlobalsFactory(uploadBaseDir: APP_ROOT . '/var/uploads'), new ResponseEmitter())
-    ->loop(
-        kernel: $kernel,
-        maxRequests: $maxRequests
-    )
-;
+new WaffleRuntime(new GlobalsFactory(uploadBaseDir: APP_ROOT . '/var/uploads'), new ResponseEmitter())->loop(
+    kernel: $kernel,
+    maxRequests: $maxRequests,
+);
