@@ -102,12 +102,14 @@ RUN composer install --no-dev --no-scripts --prefer-dist --no-progress --no-inte
 # Copy the rest of the source code
 COPY . .
 
+# Autoloader warmup — AVANT d’activer le préchargement : Composer ne doit jamais
+# tourner sous opcache.preload (un fichier préchargé reste figé pour tout le
+# processus, et Composer relirait des cartes d’autoload périmées).
+RUN composer dump-autoload --optimize --classmap-authoritative --no-dev
+
 # Enable Preload ONLY in production and ONLY after code is copied
 RUN echo "opcache.validate_timestamps = 1" >> $PHP_INI_DIR/conf.d/app.ini \
     && echo "opcache.preload=/app/config/preload.php" >> $PHP_INI_DIR/conf.d/app.ini
-
-# Autoloader warmup
-RUN composer dump-autoload --optimize --classmap-authoritative --no-dev
 
 # -----------------------------------------------------------------------------
 # Stage 4: Production (Minimal & Secure)

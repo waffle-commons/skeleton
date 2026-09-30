@@ -1,64 +1,50 @@
 <?php
 
 /**
- * Script de préchargement Waffle.
+ * Script de préchargement Waffle (opcache.preload).
  *
- * Exécuté une seule fois au démarrage du serveur. Il charge les classes du
- * framework en mémoire partagée (Opcache) pour accélérer l'exécution.
+ * Exécuté une seule fois au démarrage du serveur : les classes du framework sont
+ * chargées en mémoire partagée (OPcache) pour toute la durée de vie des workers.
+ *
+ * Les classes passent par l’autoloader Composer (class_exists) plutôt que par
+ * opcache_compile_file() : une classe n’est préchargée que si ses parents et ses
+ * interfaces sont déjà liés, et seul l’autoloader les charge dans le bon ordre,
+ * interfaces PSR comprises (elles vivent hors de vendor/waffle-commons). Une classe
+ * dont une dépendance optionnelle n’est pas installée est simplement ignorée.
  */
 
-if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
-    require __DIR__ . '/../vendor/autoload.php';
+declare(strict_types=1);
+
+$autoload = __DIR__ . '/../vendor/autoload.php';
+if (!is_file($autoload)) {
+    return;
 }
 
-(function () {
-    // Racine de l'application (/app dans Docker).
-    $projectDir = dirname(__DIR__);
+/** @var Composer\Autoload\ClassLoader $loader */
+$loader = require $autoload;
 
-    // Liste des dossiers critiques à précharger.
-    // On cible vendor/waffle-commons pour charger l'ensemble du framework.
-    $paths = [
-        $projectDir . '/vendor/waffle-commons',
-        // D'autres bibliothèques critiques peuvent être ajoutées ici.
-    ];
-
-    // Fonction récursive de parcours et de compilation.
-    $preload = function (string $dir) use (&$preload) {
-        if (!is_dir($dir)) {
-            return;
+(static function (Composer\Autoload\ClassLoader $loader): void {
+    // La carte de classes est lue sur le chargeur, jamais en incluant
+    // vendor/composer/autoload_classmap.php : un fichier inclus pendant le
+    // préchargement reste figé en mémoire pour tout le processus, et Composer
+    // relirait cette copie périmée s’il tournait sous préchargement.
+    // En production, la carte est complète (dump-autoload --classmap-authoritative).
+    foreach ($loader->getClassMap() as $class => $file) {
+        // Seul le framework est ciblé ; ses dépendances (PSR, etc.) suivent via l’autoloader.
+        if (
+            !str_contains($file, '/waffle-commons/')
+            || str_contains($file, '/tests/')
+            || str_contains($file, '/bin/')
+        ) {
+            continue;
         }
 
-        $handle = opendir($dir);
-        while ($file = readdir($handle)) {
-            if (in_array($file, ['.', '..'])) {
-                continue;
-            }
-
-            $path = $dir . '/' . $file;
-
-            if (is_dir($path)) {
-                $preload($path);
-            } elseif (str_ends_with($path, '.php')) {
-                // Exclusion des fichiers de tests et des binaires.
-                if (str_contains($path, '/tests/') || str_contains($path, '/bin/')) {
-                    continue;
-                }
-
-                try {
-                    // C'est ici que la magie opère : compilation du fichier en mémoire.
-                    opcache_compile_file($path);
-                } catch (Throwable $t) {
-                    // Les erreurs de préchargement sont volontairement silencieuses
-                    // (p. ex. des classes qui ne peuvent pas être chargées hors contexte).
-                    error_log("Échec du préchargement pour $path : " . $t->getMessage());
-                }
-            }
+        try {
+            // Déclenche l’autoloader, qui charge d’abord parents et interfaces.
+            class_exists($class);
+        } catch (Throwable $t) {
+            // Dépendance optionnelle absente (p. ex. un pont vers un SDK non installé) : on passe.
+            error_log(sprintf('Préchargement ignoré pour %s : %s', $class, $t->getMessage()));
         }
-        closedir($handle);
-    };
-
-    // Exécution du préchargement.
-    foreach ($paths as $path) {
-        $preload($path);
     }
-})();
+})($loader);
