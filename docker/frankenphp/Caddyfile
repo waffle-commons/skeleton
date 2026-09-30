@@ -1,6 +1,12 @@
 {
-# Active le mode Worker de FrankenPHP (Performance X10)
-    frankenphp
+# Active le mode Worker de FrankenPHP (Performance X10). La directive vient de
+# FRANKENPHP_CONFIG (Dockerfile : « worker ./public/index.php »), comme dans le
+# Caddyfile officiel de FrankenPHP ; un simple `frankenphp` l'ignorerait. Si la
+# variable est vide, FrankenPHP reste en mode classique et le runtime Waffle
+# traite alors une requête par exécution.
+    frankenphp {
+        {$FRANKENPHP_CONFIG}
+    }
     order php_server before file_server
 }
 
