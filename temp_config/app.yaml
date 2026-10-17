@@ -15,6 +15,10 @@ waffle:
   health:
     required:
       - db.pool
+    # Arrêt gracieux (OPS-02, RFC-023 §5.1) : le hook preStop du pod crée ce fichier
+    # puis patiente ; tant qu'il existe, /readyz répond 503 alors que PHP sert encore
+    # le reste du trafic. Ensuite SIGTERM, et le grace_period de Caddy draine l'en-cours.
+    drain_marker: '/tmp/waffle-draining'
   security:
     level: 10
     csrf:

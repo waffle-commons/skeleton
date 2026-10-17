@@ -636,7 +636,9 @@ final class AppKernelFactory
             $required[] = $name;
         }
 
-        return new ReadinessProbe($checks, $required, $metrics);
+        // OPS-02 (RFC-023 §5.1) : le hook preStop crée ce marqueur ; tant qu'il existe,
+        // /readyz répond 503 et PHP continue de servir le reste du trafic.
+        return new ReadinessProbe($checks, $required, $metrics, $config->getString(key: 'waffle.health.drain_marker'));
     }
 
     /**

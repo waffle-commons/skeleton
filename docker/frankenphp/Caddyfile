@@ -8,6 +8,15 @@
         {$FRANKENPHP_CONFIG}
     }
     order php_server before file_server
+
+    # Arrêt gracieux (OPS-02, RFC-023 §3.4 et §5.1). À SIGTERM, Caddy ferme ses ports
+    # et laisse les requêtes en cours finir pendant `grace_period`. La bascule de /readyz
+    # se fait AVANT, dans le hook preStop du pod (Kubernetes) :
+    #   lifecycle.preStop.exec.command: ["sh", "-c", "touch /tmp/waffle-draining && sleep 5"]
+    # terminationGracePeriodSeconds doit dépasser le sommeil du preStop + grace_period.
+    # (Pas de `shutdown_delay` : FrankenPHP s'arrête dès SIGTERM, chaque requête PHP
+    # pendant ce délai répondrait 500 — mesuré sur FrankenPHP 1.12.7.)
+    grace_period {$CADDY_GRACE_PERIOD:25s}
 }
 
 # Définition du serveur (HTTP/HTTPS géré automatiquement)
