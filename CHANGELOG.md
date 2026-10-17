@@ -5,6 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Released in lockstep with the Waffle Commons umbrella tag.
 
+## [Unreleased]
+
+### Added
+- The kernel factory registers the PSR-17 `ServerRequestFactoryInterface` (the `http` component's
+  `ServerRequestFactory`). The `waffle-commons/testing` bridge builds its requests with it and the stream
+  factory, without importing `http` (CARRY-04, TEST-01). A test pins the registration.
+
 ## [0.1.0-beta6] — 2026-09
 
 **Theme: audit remediation, and the template defects a real benchmark exposed.**

@@ -7,6 +7,7 @@ namespace AppTests\Factory;
 use App\Factory\AppKernelFactory;
 use AppTests\AbstractTestCase;
 use PHPUnit\Framework\Attributes\Test;
+use Psr\Http\Message\ServerRequestFactoryInterface;
 use RuntimeException;
 use Waffle\Commons\Contracts\Constant\Constant;
 use Waffle\Commons\Contracts\Core\KernelInterface;
@@ -132,5 +133,21 @@ final class AppKernelFactoryTest extends AbstractTestCase
         } finally {
             file_put_contents($configPath, $original);
         }
+    }
+
+    /**
+     * CARRY-04 : le container du kernel fournit la factory PSR-17 des requêtes
+     * serveur, avec laquelle le pont de test waffle-commons/testing construit ses
+     * requêtes sans importer le composant http.
+     */
+    #[Test]
+    public function the_kernel_container_provides_the_server_request_factory(): void
+    {
+        $kernel = AppKernelFactory::create(env: Constant::ENV_DEV, debug: true);
+
+        self::assertInstanceOf(
+            ServerRequestFactoryInterface::class,
+            $kernel->container->get(ServerRequestFactoryInterface::class),
+        );
     }
 }

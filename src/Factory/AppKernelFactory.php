@@ -12,6 +12,7 @@ use PDO;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestFactoryInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
+use Psr\Http\Message\ServerRequestFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Psr\Log\LoggerInterface;
@@ -75,6 +76,7 @@ use Waffle\Commons\EventDispatcher\Dispatcher\EventDispatcher;
 use Waffle\Commons\EventDispatcher\Provider\ListenerProvider;
 use Waffle\Commons\Http\Factory\RequestFactory;
 use Waffle\Commons\Http\Factory\ResponseFactory;
+use Waffle\Commons\Http\Factory\ServerRequestFactory;
 use Waffle\Commons\Http\Factory\StreamFactory;
 use Waffle\Commons\HttpClient\Client;
 use Waffle\Commons\HttpClient\Security\SsrfGuard;
@@ -168,6 +170,11 @@ final class AppKernelFactory
         // Enregistrement de la factory PSR-17 (requise par le client HTTP).
         $streamFactory = new StreamFactory($connectionTracker);
         $container->set(StreamFactoryInterface::class, $streamFactory);
+
+        // Enregistrement de la factory PSR-17 des requêtes serveur (CARRY-04) : le pont
+        // de test waffle-commons/testing construit ses requêtes avec elle et la factory
+        // de flux ci-dessus, sans importer le composant http.
+        $container->set(ServerRequestFactoryInterface::class, new ServerRequestFactory());
 
         // Traçage distribué (AXE 5 / OBS-01) : NullTracer + propagateur W3C no-op par
         // défaut (surcoût ~0, aucun en-tête de trace émis). Le pont OpenTelemetry
