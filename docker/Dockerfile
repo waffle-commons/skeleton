@@ -7,11 +7,14 @@
 ARG FRANKEN_VERSION='1.12.7'
 ARG PHP_VERSION='8'
 ARG OS='trixie'
+# Digest de l'image de base : une étiquette bouge, un digest non (build reproductible et hors ligne).
+# À mettre à jour avec FRANKEN_VERSION : scripts/images-pin.py --pull indique le nouveau digest.
+ARG FRANKEN_DIGEST='@sha256:81231b570830952baa3e62db06707996a886ff0a61ca64c77d032c8a110e6bc1'
 
 # -----------------------------------------------------------------------------
 # Stage 1: Base (Shared Runtime)
 # -----------------------------------------------------------------------------
-FROM dunglas/frankenphp:${FRANKEN_VERSION}-php${PHP_VERSION}-${OS} AS base
+FROM dunglas/frankenphp:${FRANKEN_VERSION}-php${PHP_VERSION}-${OS}${FRANKEN_DIGEST} AS base
 
 # Environment Standardization
 # Optimization for Waffle (Worker Mode)

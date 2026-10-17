@@ -36,7 +36,7 @@ services:
   # L'application s'y connecte via le nom de service (DB_HOST=waffle-postgres) ;
   # le port 5432 est aussi exposé sur l'hôte pour les sondes manuelles (psql, IDE).
   waffle-postgres:
-    image: postgres:17-alpine
+    image: postgres:17-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193
     container_name: waffle-postgres
     environment:
       # Identifiants de développement local (résolus depuis .env) —
