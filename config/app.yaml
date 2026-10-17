@@ -9,6 +9,12 @@ waffle:
   # En PROD, ce paramètre DOIT être renseigné pour prévenir l'injection d'en-tête Host.
   trusted_hosts:
     - localhost
+  # Sondes d'orchestrateur (OPS-01, RFC-023) : /healthz (vivacité) et /readyz
+  # (disponibilité). Une sonde listée ici est indispensable : absente ou en échec,
+  # l'instance répond 503 sur /readyz et Kubernetes cesse de lui router du trafic.
+  health:
+    required:
+      - db.pool
   security:
     # Niveau de durcissement de l'INTÉGRITÉ DES OBJETS résolus (échelle cumulative
     # Level1 → Level10, RFC-002), appliquée par le SecureContainer à chaque service

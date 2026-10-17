@@ -34,6 +34,7 @@ use Waffle\Commons\Auth\WebAuthn\WebAuthnAuthenticator;
 use Waffle\Commons\Auth\WebAuthn\WebAuthnCeremony;
 use Waffle\Commons\Auth\WebAuthn\WebAuthnLibAdapter;
 use Waffle\Commons\Cache\Factory\CacheFactory;
+use Waffle\Commons\Cache\Health\CacheHealthCheck;
 use Waffle\Commons\Config\Config;
 use Waffle\Commons\Config\DotEnv;
 use Waffle\Commons\Config\Exception\InvalidConfigurationException;
@@ -68,6 +69,7 @@ use Waffle\Commons\Contracts\Telemetry\NullTracer;
 use Waffle\Commons\Contracts\Telemetry\TracerInterface;
 use Waffle\Commons\Contracts\Validation\ValidatorInterface;
 use Waffle\Commons\Data\Connection\PDOConnectionPool;
+use Waffle\Commons\Data\Health\ConnectionPoolHealthCheck;
 use Waffle\Commons\Data\Middleware\TransactionIsolationMiddleware;
 use Waffle\Commons\Data\Migration\MigrationRunner;
 use Waffle\Commons\ErrorHandler\Middleware\ErrorHandlerMiddleware;
@@ -83,6 +85,8 @@ use Waffle\Commons\HttpClient\Security\SsrfGuard;
 use Waffle\Commons\Log\Channel\LogChannel;
 use Waffle\Commons\Log\StreamLogger;
 use Waffle\Commons\Pipeline\CoreRoutingMiddleware;
+use Waffle\Commons\Pipeline\Health\ReadinessProbe;
+use Waffle\Commons\Pipeline\Middleware\ProbeMiddleware;
 use Waffle\Commons\Pipeline\Middleware\SecureHeadersMiddleware;
 use Waffle\Commons\Pipeline\Middleware\TrustedHostMiddleware;
 use Waffle\Commons\Pipeline\MiddlewareStack;
@@ -337,6 +341,20 @@ final class AppKernelFactory
             : new NullMetricsRegistry();
         $container->set(MetricsRegistryInterface::class, $metricsRegistry);
 
+        // 5u. Cache PSR-16 (RFC-013), pool de connexions + migration runner (RFC-022).
+        //     Construits dès ici, et non plus après le dispatcher : les sondes de
+        //     disponibilité (5w) en ont besoin, et ils ne dépendent que de la
+        //     configuration et du traceur de connexions.
+        $connectionPool = self::buildConnectionPool($config, $connectionTracker);
+        $rawCache = self::registerDataServices($container, $root, $config, $connectionPool, $connectionTracker);
+
+        // 5v. AXE 5 / OBS-02 : décorateur cache-hit-ratio — enveloppe le cache partagé
+        //     pour alimenter `waffle_cache_hits_total` / `_misses_total` dans le registre
+        //     APCu (jamais sur le tas worker), exposés via /waffle-metrics. Réenregistré
+        //     dans le conteneur : Router et tout consommateur reçoivent la version mesurée.
+        $cache = new MeteredCache($rawCache, $metricsRegistry);
+        $container->set(CacheInterface::class, $cache);
+
         $collectors = [new MemoryCollector(), new GcCollector(), new PoolUtilizationCollector()];
         if ($metricsRegistry instanceof MetricsCollectorInterface) {
             $collectors[] = $metricsRegistry;
@@ -345,6 +363,22 @@ final class AppKernelFactory
         $stack->add(
             middleware: new MetricsMiddleware(
                 new PrometheusExporter($collectors),
+                $responseFactory,
+                $streamFactory,
+                null,
+                ['127.0.0.1', '::1'],
+            ),
+        );
+
+        // 5w. Sondes d'orchestrateur (OPS-01, RFC-023) — /healthz (vivacité) et /readyz
+        //     (disponibilité). Avant le traçage : sondées toutes les quelques secondes,
+        //     elles n'ouvrent pas de span et ne gonflent pas les métriques de requêtes ;
+        //     elles exportent leurs propres durées. Avant TrustedHost : la sonde kubelet
+        //     porte l'IP du pod en Host (RFC-023 §5.2). Le rapport détaillé suit la règle
+        //     d'accès de /waffle-metrics : localhost uniquement, ou un bearer token.
+        $stack->add(
+            middleware: new ProbeMiddleware(
+                self::buildReadinessProbe($config, $connectionPool, $rawCache, $metricsRegistry),
                 $responseFactory,
                 $streamFactory,
                 null,
@@ -431,16 +465,6 @@ final class AppKernelFactory
         // Le dispatcher d'événements est capturé dans la closure pour rester
         // injecté sans dépendre d'un slot supplémentaire dans le conteneur.
         self::registerTerminalHandlers($container, $eventDispatcher);
-
-        // 7. Cache PSR-16 (RFC-013), pool de connexions + migration runner (RFC-022).
-        $cache = self::registerDataServices($container, $root, $config, $connectionTracker);
-
-        // 7b. AXE 5 / OBS-02 : décorateur cache-hit-ratio — enveloppe le cache partagé
-        //     pour alimenter `waffle_cache_hits_total` / `_misses_total` dans le registre
-        //     APCu (jamais sur le tas worker), exposés via /waffle-metrics. Réenregistré
-        //     dans le conteneur : Router et tout consommateur reçoivent la version mesurée.
-        $cache = new MeteredCache($cache, $metricsRegistry);
-        $container->set(CacheInterface::class, $cache);
 
         // 8. Instanciation et démarrage du Router.
         $controllersPath = $config->getString(key: 'waffle.paths.controllers');
@@ -567,12 +591,12 @@ final class AppKernelFactory
         ContainerInterface $container,
         string $root,
         Config $config,
+        PDOConnectionPool $connectionPool,
         ?ConnectionTrackerInterface $tracker = null,
     ): CacheInterface {
         $cache = self::buildCache($root, $config, $tracker);
         $container->set(CacheInterface::class, $cache);
 
-        $connectionPool = self::buildConnectionPool($config, $tracker);
         $container->set(ConnectionPoolInterface::class, $connectionPool);
         // Contrat relationnel typé : les dépôts SQL s'injectent dessus pour un accès PDO typé.
         $container->set(RelationalConnectionPoolInterface::class, $connectionPool);
@@ -583,6 +607,36 @@ final class AppKernelFactory
         $container->set(MigrationRunner::class, $migrationRunner);
 
         return $cache;
+    }
+
+    /**
+     * Sondes de disponibilité (OPS-01, RFC-023 §3.3) : le pool relationnel toujours ;
+     * le cache seulement s'il est adossé à Redis (un cache mémoire répondrait toujours
+     * « up »). Le cache reçu est le cache brut, pas le décorateur mesuré : une sonde
+     * toutes les quelques secondes fausserait le ratio hits/misses. Les noms listés
+     * dans `waffle.health.required` sont indispensables (RFC-023 §3.2).
+     */
+    private static function buildReadinessProbe(
+        Config $config,
+        ConnectionPoolInterface $pool,
+        CacheInterface $cache,
+        MetricsRegistryInterface $metrics,
+    ): ReadinessProbe {
+        $checks = [new ConnectionPoolHealthCheck($pool)];
+        if ($config->getString('waffle.cache.adapter') === CacheConstant::BACKEND_REDIS) {
+            $checks[] = new CacheHealthCheck($cache);
+        }
+
+        $required = [];
+        foreach ($config->getArray(key: 'waffle.health.required') ?? [] as $name) {
+            if (!is_string($name)) {
+                continue;
+            }
+
+            $required[] = $name;
+        }
+
+        return new ReadinessProbe($checks, $required, $metrics);
     }
 
     /**
