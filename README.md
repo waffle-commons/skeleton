@@ -200,15 +200,18 @@ See the framework docs at [`waffle-commons/documentation`](https://github.com/wa
 🗃️ Database & Migrations
 -------------------------
 
-Waffle ships a lightweight, forward-only SQL migration runner (RFC-022, via `waffle-commons/data`). Database access is configured under `waffle.database` in `config/app.yaml` (credentials from the `DB_*` env vars), and the connection pool + runner are wired in `src/Factory/AppKernelFactory.php` and registered as `db:migrate` in `bin/waffle`.
+Waffle ships a lightweight SQL migration runner (RFC-022, via `waffle-commons/data`). Database access is configured under `waffle.database` in `config/app.yaml` (credentials from the `DB_*` env vars), and the connection pool + runner are wired in `src/Factory/AppKernelFactory.php` and registered in `bin/waffle` as `db:migrate`, `db:status` and `db:rollback`, next to the `make:migration` scaffolder.
 
-Write versioned SQL scripts in `migrations/`, named `Version<YYYYMMDDNN>_<Description>.sql`, then apply the pending ones from the project root:
+From the project root, create a version, write its SQL, then apply the pending ones:
 
 ```shell
-php bin/waffle db:migrate
+php bin/waffle make:migration CreateOrdersTable   # migrations/Version<YYYYMMDDNN>_CreateOrdersTable.sql + .down.sql
+php bin/waffle db:migrate                         # applies every pending version
+php bin/waffle db:status                          # applied, pending or missing, version by version
+php bin/waffle db:rollback --steps=1              # reverts the most recent version through its .down.sql
 ```
 
-Each migration runs in its own transaction and is recorded in a `waffle_migrations` table, so re-runs skip already-applied scripts. The skeleton ships a sample `migrations/Version2026053101_CreateUsersTable.sql` to get you started. See the [Database Migrations how-to](https://github.com/waffle-commons/documentation/blob/main/how-to/database-migrations.md) for the full workflow and the MySQL transactional-DDL caveat.
+Each migration runs in its own transaction and is recorded in a `waffle_migrations` table, so re-runs skip already-applied scripts; a script that holds only comments is refused, never recorded. The skeleton ships a sample `migrations/Version2026053101_CreateUsersTable.sql` and its down script to get you started. See the [Database Migrations how-to](https://github.com/waffle-commons/documentation/blob/main/how-to/database-migrations.md) for the full workflow and the transactional-DDL caveat on MySQL, MariaDB and Oracle.
 
 👩‍💻 Usage Example
 -------------------

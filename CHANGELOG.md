@@ -12,6 +12,7 @@ Released in lockstep with the Waffle Commons umbrella tag.
   `ServerRequestFactory`). The `waffle-commons/testing` bridge builds its requests with it and the stream
   factory, without importing `http` (CARRY-04, TEST-01). A test pins the registration.
 - **Orchestrator probes (OPS-01).** The kernel factory mounts `pipeline`'s `ProbeMiddleware` after `/waffle-metrics` and before tracing and `TrustedHostMiddleware`, so `/healthz` and `/readyz` answer whatever the `Host` header says and never inflate the request metrics. `/readyz` probes the relational pool (`db.pool`, required by the new `waffle.health.required` key) and, when the cache is Redis-backed, the cache; the per-probe report goes to localhost only, like `/waffle-metrics`. The data services are now built before the middleware stack so the probes can use them, and the cache probe reads the raw cache, so probes do not skew the cache hit ratio. Tests drive both endpoints through the real kernel.
+- **Migration lifecycle (OPS-03).** `bin/waffle` registers `make:migration`, `db:status` and `db:rollback` next to `db:migrate`; `make:migration` writes into `waffle.database.migrations_path` with the system clock. The sample `Version2026053101_CreateUsersTable` migration gains its down script (`DROP TABLE IF EXISTS users`), so `db:rollback` can revert it.
 
 ## [0.1.0-beta6] — 2026-09
 

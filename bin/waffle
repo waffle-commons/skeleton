@@ -20,10 +20,13 @@ use Waffle\Commons\Console\Command\CacheClearCommand;
 use Waffle\Commons\Console\Command\ContainerCompileCommand;
 use Waffle\Commons\Console\Command\DataWarmupCommand;
 use Waffle\Commons\Console\Command\MigrateCommand;
+use Waffle\Commons\Console\Command\MigrationRollbackCommand;
+use Waffle\Commons\Console\Command\MigrationStatusCommand;
 use Waffle\Commons\Console\Command\RouteCompileCommand;
 use Waffle\Commons\Console\Command\RouteListCommand;
 use Waffle\Commons\Console\Command\SecurityAuditCommand;
 use Waffle\Commons\Console\ConsoleApplication;
+use Waffle\Commons\Console\Maker\Command\MakeMigrationCommand;
 use Waffle\Commons\Console\Output\StreamOutput;
 use Waffle\Commons\Container\Container;
 use Waffle\Commons\Contracts\Constant\Constant;
@@ -39,6 +42,7 @@ use Waffle\Commons\Contracts\Data\Migration\MigrationRunnerInterface;
 use Waffle\Commons\Auth\SecurityContext;
 use Waffle\Commons\Security\Container\SecureContainer;
 use Waffle\Commons\Security\Security;
+use Waffle\Commons\Utils\Clock\SystemClock;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
@@ -77,6 +81,23 @@ $app->add(command: new RouteListCommand(router: $router->boot(container: $secure
 $app->add(command: new SecurityAuditCommand(router: $router->boot(container: $secureContainer)));
 $app->add(command: new CacheClearCommand(cache: $cache));
 $app->add(command: new MigrateCommand(
+    runner: $container->get(MigrationRunnerInterface::class),
+    pool: $container->get(ConnectionPoolInterface::class),
+));
+// Cycle de vie des migrations (OPS-03) : `make:migration <Nom>` écrit
+// `Version<AAAAMMJJNN>_<Nom>.sql` et son `.down.sql` dans le répertoire que lit
+// `db:migrate` ; `db:status` liste chaque version (appliquée, en attente ou
+// manquante) ; `db:rollback [--steps=N]` annule les N dernières par leurs scripts
+// `.down.sql`, après les avoir toutes vérifiées.
+$app->add(command: new MakeMigrationCommand(
+    clock: new SystemClock(),
+    migrationsPath: $config->getString(key: 'waffle.database.migrations_path') ?? 'migrations',
+));
+$app->add(command: new MigrationStatusCommand(
+    runner: $container->get(MigrationRunnerInterface::class),
+    pool: $container->get(ConnectionPoolInterface::class),
+));
+$app->add(command: new MigrationRollbackCommand(
     runner: $container->get(MigrationRunnerInterface::class),
     pool: $container->get(ConnectionPoolInterface::class),
 ));
