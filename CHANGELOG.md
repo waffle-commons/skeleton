@@ -16,7 +16,7 @@ Released in lockstep with the Waffle Commons umbrella tag.
 
 ### Fixed
 - **The production image can run `db:migrate`.** The prod stage now copies `bin/` and `migrations/`, so a Kubernetes Job runs `php bin/waffle db:migrate` from the release image (OPS-03, RFC-014).
-- **A fresh clone builds (CARRY-08).** The builder copied `composer.lock`, which the skeleton does not version, so `docker build` failed at that `COPY`; it is now optional (`composer.lock*`). Without a lock, name the targeted release with `--build-arg COMPOSER_ROOT_VERSION=…`: Composer cannot guess the root version without `.git`, and the `self.version` requirements would not resolve.
+- **A fresh clone builds (CARRY-08).** The builder copied `composer.lock`, which the skeleton does not version, so `docker build` failed at that `COPY`; it is now optional (`composer.lock*`). A project made by `composer create-project` carries the chosen version in its composer.json and builds as is; the skeleton's own repository requires `self.version`, which Composer cannot resolve without `.git` or a lock, so building it from a fresh clone takes `--build-arg COMPOSER_ROOT_VERSION=…`.
 
 ## [0.1.0-beta6] — 2026-09
 

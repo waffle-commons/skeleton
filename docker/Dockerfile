@@ -106,10 +106,12 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # composer.lock obtient une construction reproductible.
 COPY composer.json composer.lock* ./
 
-# Sans verrou ni .git dans le contexte, Composer devine la version de la racine
-# (1.0.0) et les dépendances `self.version` ne se résolvent pas : nommez la
-# version visée, `--build-arg COMPOSER_ROOT_VERSION=0.1.0-beta7`. Avec un verrou,
-# inutile.
+# Dans le dépôt du squelette seulement : ses dépendances `self.version` exigent
+# la version de la racine, que Composer devine (1.0.0) sans verrou ni .git dans
+# le contexte. Nommez alors la version visée :
+# `--build-arg COMPOSER_ROOT_VERSION=0.1.0-beta7`. Un projet créé par
+# `composer create-project` porte la version choisie dans son composer.json :
+# l'argument y est inutile, comme partout où il y a un verrou.
 ARG COMPOSER_ROOT_VERSION
 
 # Install PROD vendors (no dev, optimized)
