@@ -14,6 +14,10 @@ Released in lockstep with the Waffle Commons umbrella tag.
 - **Orchestrator probes (OPS-01).** The kernel factory mounts `pipeline`'s `ProbeMiddleware` after `/waffle-metrics` and before tracing and `TrustedHostMiddleware`, so `/healthz` and `/readyz` answer whatever the `Host` header says and never inflate the request metrics. `/readyz` probes the relational pool (`db.pool`, required by the new `waffle.health.required` key) and, when the cache is Redis-backed, the cache; the per-probe report goes to localhost only, like `/waffle-metrics`. The data services are now built before the middleware stack so the probes can use them, and the cache probe reads the raw cache, so probes do not skew the cache hit ratio. Tests drive both endpoints through the real kernel.
 - **Migration lifecycle (OPS-03).** `bin/waffle` registers `make:migration`, `db:status` and `db:rollback` next to `db:migrate`; `make:migration` writes into `waffle.database.migrations_path` with the system clock. The sample `Version2026053101_CreateUsersTable` migration gains its down script (`DROP TABLE IF EXISTS users`), so `db:rollback` can revert it.
 
+### Fixed
+- **The production image can run `db:migrate`.** The prod stage now copies `bin/` and `migrations/`, so a Kubernetes Job runs `php bin/waffle db:migrate` from the release image (OPS-03, RFC-014).
+- **A fresh clone builds (CARRY-08).** The builder copied `composer.lock`, which the skeleton does not version, so `docker build` failed at that `COPY`; it is now optional (`composer.lock*`). Without a lock, name the targeted release with `--build-arg COMPOSER_ROOT_VERSION=…`: Composer cannot guess the root version without `.git`, and the `self.version` requirements would not resolve.
+
 ## [0.1.0-beta6] — 2026-09
 
 **Theme: audit remediation, and the template defects a real benchmark exposed.**

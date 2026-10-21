@@ -100,7 +100,17 @@ FROM base AS builder
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # Copy only manifests to optimize Docker cache
-COPY composer.json composer.lock ./
+# Le verrou est facultatif (CARRY-08) : le squelette ne le versionne pas (cible de
+# `composer create-project`), donc un clone neuf n'en a pas, et le joker laisse la
+# construction résoudre les dépendances. Une application qui versionne son
+# composer.lock obtient une construction reproductible.
+COPY composer.json composer.lock* ./
+
+# Sans verrou ni .git dans le contexte, Composer devine la version de la racine
+# (1.0.0) et les dépendances `self.version` ne se résolvent pas : nommez la
+# version visée, `--build-arg COMPOSER_ROOT_VERSION=0.1.0-beta7`. Avec un verrou,
+# inutile.
+ARG COMPOSER_ROOT_VERSION
 
 # Install PROD vendors (no dev, optimized)
 RUN composer install --no-dev --no-scripts --prefer-dist --no-progress --no-interaction --optimize-autoloader
@@ -143,6 +153,10 @@ COPY --from=builder --link /app/vendor /app/vendor
 COPY --from=builder --link /app/src /app/src
 COPY --from=builder --link /app/config /app/config
 COPY --from=builder --link /app/public /app/public
+# La console et les migrations SQL : un Job Kubernetes lance
+# `php bin/waffle db:migrate` depuis l'image de release (OPS-03, RFC-014).
+COPY --from=builder --link /app/bin /app/bin
+COPY --from=builder --link /app/migrations /app/migrations
 
 # Enable Preload ONLY in production and ONLY after code is copied
 RUN echo "opcache.validate_timestamps = 0" >> $PHP_INI_DIR/conf.d/app.ini \
