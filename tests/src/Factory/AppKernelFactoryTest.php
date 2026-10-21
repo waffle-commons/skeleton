@@ -16,7 +16,7 @@ use Waffle\Commons\Contracts\Core\KernelInterface;
  * FIX-01 #9 (audit Beta6) : régression du garde-fou fail-closed
  * `APP_ENV=prod` + `APP_DEBUG=true`, ajouté dans AppKernelFactory::create().
  *
- * `temp_config/app.yaml` (cf. tests/bootstrap.php) laisse les secrets CSRF/Auth
+ * `tests/config/app.yaml` (cf. tests/bootstrap.php) laisse les secrets CSRF/Auth
  * vides — hors production, resolveCsrfSecret()/resolveAuthSecret() retombent
  * sur un secret éphémère. En production, ils redeviennent stricts : on fournit
  * donc explicitement des secrets valides (>= 32 octets) via putenv() pour isoler
@@ -75,7 +75,7 @@ final class AppKernelFactoryTest extends AbstractTestCase
     }
 
     /**
-     * Régression voisine (même famille fail-closed que #9) : `temp_config/app.yaml`
+     * Régression voisine (même famille fail-closed que #9) : `tests/config/app.yaml`
      * laisse `waffle.security.csrf.secret` vide et aucun WAFFLE_CSRF_SECRET n'est
      * exporté dans ce conteneur — resolveCsrfSecret() doit donc refuser de démarrer
      * en production plutôt que de retomber silencieusement sur un secret éphémère.
@@ -109,7 +109,7 @@ final class AppKernelFactoryTest extends AbstractTestCase
      * FIX-01 (audit Beta6) : une config YAML malformée ne doit plus faire
      * remonter d'exception non rattrapée à travers le boot du kernel —
      * AppKernelFactory::create() rattrape InvalidConfigurationException et
-     * retente avec Failsafe::ENABLED. `temp_config/app.yaml` est le seul
+     * retente avec Failsafe::ENABLED. `tests/config/app.yaml` est le seul
      * fichier de config partagé par toute la suite : corrompu ici puis
      * restauré dans `finally`, jamais laissé dans un état invalide même en
      * cas d'échec de l'assertion.

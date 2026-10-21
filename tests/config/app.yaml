@@ -1,6 +1,6 @@
 # Configuration de TEST de l'application Waffle.
 #
-# Référencée par tests/bootstrap.php (const APP_CONFIG = 'temp_config'), elle
+# Référencée par tests/bootstrap.php (const APP_CONFIG = 'tests/config'), elle
 # fournit des valeurs sûres et autonomes pour amorcer le kernel sous PHPUnit
 # sans dépendance réseau : cache en mémoire (array), aucune connexion ouverte au
 # boot (le pool PDO est paresseux), secrets éphémères tolérés hors production.
