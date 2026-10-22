@@ -187,7 +187,8 @@ final class AppKernelFactory
         // amont → aval, et la démo de propagation `traceparent` inter-services).
         // Enregistré comme service partagé : injecté dans les contrôleurs ET réutilisé
         // par le client HTTP + le TracingMiddleware (une seule trace de bout en bout).
-        $tracer = new NullTracer();
+        // [DXP-01] En debug, le traceur compte aussi les requêtes en base (ProfilerFactory).
+        $tracer = ProfilerFactory::tracer(new NullTracer(), $debug);
         $tracePropagator = new NullTextMapPropagator();
         $container->set(TracerInterface::class, $tracer);
 
@@ -336,6 +337,8 @@ final class AppKernelFactory
         $errorHandler = new ErrorHandlerMiddleware(renderer: $errorRenderer, logger: $errorLogger);
 
         $stack->prepend(middleware: $errorHandler);
+        // [DXP-01] En-têtes du profileur, en debug seulement, devant le gestionnaire d'erreurs.
+        ProfilerFactory::register($stack, $tracer, $debug);
 
         // 5t. Télémétrie (AXE 5 / OBS-02) — endpoint /waffle-metrics + métriques de
         //     requête. Compteurs en mémoire partagée APCu (jamais sur le tas worker) ;
