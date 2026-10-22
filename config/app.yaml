@@ -2,8 +2,6 @@
 waffle:
   # Environnement applicatif (dev, prod, test). Renseigné par la variable d'environnement serveur.
   env: '%env(APP_ENV)%'
-  # Mode debug. À mettre à false en production pour des raisons de sécurité.
-  debug: '%env(APP_DEBUG)%'
   # Durcissement sécurité : hôtes de confiance.
   # Liste des domaines autorisés. Si vide, tous les hôtes sont acceptés (DEV uniquement).
   # En PROD, ce paramètre DOIT être renseigné pour prévenir l'injection d'en-tête Host.
@@ -121,11 +119,8 @@ waffle:
   paths:
     controllers: 'src/Controller'
     services: 'src/Service'
-    event_listeners: 'app/EventListener'
-  # Configuration de la journalisation (PSR-3).
-  log:
-    channel: app
-    stream: 'php://stderr'
+    # Résolu sous la racine de l'application, comme controllers et services.
+    event_listeners: 'src/EventListener'
   # Cache PSR-16 (RFC-013). Alimente le cache du Router et le futur store CSRF.
   cache:
     adapter: 'redis'                    # array | file | redis

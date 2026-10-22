@@ -6,7 +6,6 @@
 # boot (le pool PDO est paresseux), secrets éphémères tolérés hors production.
 waffle:
   env: 'test'
-  debug: true
   trusted_hosts:
     - localhost
   # Sondes d'orchestrateur (OPS-01, RFC-023) : /healthz (vivacité) et /readyz
@@ -56,10 +55,7 @@ waffle:
   paths:
     controllers: 'src/Controller'
     services: 'src/Service'
-    event_listeners: 'app/EventListener'
-  log:
-    channel: app
-    stream: 'php://stderr'
+    event_listeners: 'src/EventListener'
   cache:
     # Cache en mémoire : aucun Redis requis pour amorcer le kernel sous test.
     adapter: 'array'

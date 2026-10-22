@@ -13,15 +13,16 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Psr\Log\NullLogger;
 use Waffle\Commons\Auth\SecurityContext;
+use Waffle\Commons\Contracts\Telemetry\Metrics\MetricsRegistryInterface;
 use Waffle\Commons\Http\Factory\ResponseFactory;
 use Waffle\Commons\Http\Factory\ServerRequestFactory;
-use Waffle\Commons\Pipeline\MiddlewareStack;
 use Waffle\Commons\Security\Middleware\RateLimitMiddleware;
+use Waffle\Commons\Security\RateLimit\RateLimiter;
 
 /**
- * La limitation de débit du squelette (NET-01) : rien n'est monté quand elle est
- * coupée ; montée, elle compte dans un seau partagé sur le Redis du service compose
- * `waffle-redis` et suit son mode d'échec quand ce Redis ne répond pas.
+ * La limitation de débit du squelette (NET-01) : aucun middleware quand elle est
+ * coupée ; construite, elle compte dans un seau partagé sur le Redis du service compose
+ * `waffle-redis`, et suit son mode d'échec — métrique comprise — quand ce Redis ne répond pas.
  *
  * Les seaux survivent à l'exécution (ils vivent dans Redis) : chaque test compte pour
  * une IP de documentation tirée au hasard, jamais deux fois la même.
@@ -31,31 +32,38 @@ final class RateLimitFactoryTest extends AbstractTestCase
     private const string KEY = 'waffle.security.rate_limit.';
 
     #[Test]
-    public function nothing_is_mounted_when_the_limiter_is_disabled(): void
+    public function nothing_is_built_when_the_limiter_is_disabled(): void
     {
-        $stack = new MiddlewareStack();
         $config = new ArrayConfig([self::KEY . 'enabled' => false]);
 
-        RateLimitFactory::register($stack, $config, new SecurityContext(), new ResponseFactory(), new NullLogger());
-
-        self::assertSame([], $stack->getMiddlewares());
-    }
-
-    #[Test]
-    public function an_enabled_limiter_is_mounted_on_the_stack(): void
-    {
-        $stack = new MiddlewareStack();
-
-        RateLimitFactory::register(
-            $stack,
-            self::config([]),
+        self::assertNull(RateLimitFactory::middleware(
+            $config,
             new SecurityContext(),
             new ResponseFactory(),
             new NullLogger(),
-        );
+        ));
+    }
 
-        self::assertCount(1, $stack->getMiddlewares());
-        self::assertInstanceOf(RateLimitMiddleware::class, $stack->getMiddlewares()[0] ?? null);
+    #[Test]
+    public function a_storage_outage_is_counted_in_the_metrics_registry(): void
+    {
+        $metrics = $this->createMock(MetricsRegistryInterface::class);
+        $metrics->expects($this->once())->method('increment')->with(RateLimiter::STORAGE_ERRORS_METRIC, 1.0, [
+            'mode' => 'open',
+        ]);
+        $limiter = RateLimitFactory::middleware(
+            new ArrayConfig([self::KEY . 'enabled' => true, self::KEY . 'redis_dsn' => 'redis://127.0.0.1:1']),
+            new SecurityContext(),
+            new ResponseFactory(),
+            new NullLogger(),
+            $metrics,
+        );
+        self::assertInstanceOf(RateLimitMiddleware::class, $limiter);
+
+        self::assertSame(
+            200,
+            $limiter->process(self::request(self::documentationIp()), self::handler())->getStatusCode(),
+        );
     }
 
     #[Test]

@@ -435,16 +435,28 @@ final class AppKernelFactory
 
         // 5a-ratelimit. Limitation de débit (NET-01) : après l'authentification, pour
         // compter par sujet quand il est connu, par IP cliente sinon. Désactivable.
-        RateLimitFactory::register($stack, $config, $securityContext, $responseFactory, $secureLogger);
+        // Une panne de Redis compte dans waffle_ratelimit_storage_errors_total (/waffle-metrics).
+        $rateLimit = RateLimitFactory::middleware(
+            $config,
+            $securityContext,
+            $responseFactory,
+            $secureLogger,
+            $metricsRegistry,
+        );
+        if ($rateLimit !== null) {
+            $stack->add(middleware: $rateLimit);
+        }
 
         // 5b. Mise en place du dispatcher d'événements.
         $listenerProvider = new ListenerProvider();
         $eventDispatcher = new EventDispatcher($listenerProvider);
 
-        // Auto-découverte des listeners dans le dossier EventListener.
+        // Auto-découverte des listeners dans le dossier EventListener, résolu sous la
+        // racine de l'application comme controllers et services : un chemin relatif
+        // laissé tel quel dépendrait du répertoire courant du worker.
         $eventListenersPath = $config->getString('waffle.paths.event_listeners');
         if (is_string($eventListenersPath)) {
-            EventListenerDiscovery::discover($listenerProvider, $eventListenersPath);
+            EventListenerDiscovery::discover($listenerProvider, $root . DIRECTORY_SEPARATOR . $eventListenersPath);
         }
 
         // 6. Logger du kernel. Le kernel lui-même est construit plus bas (étape 9),
