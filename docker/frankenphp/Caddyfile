@@ -9,13 +9,19 @@
     }
     order php_server before file_server
 
-    # Arrêt gracieux (OPS-02, RFC-023 §3.4 et §5.1). À SIGTERM, Caddy ferme ses ports
-    # et laisse les requêtes en cours finir pendant `grace_period`. La bascule de /readyz
-    # se fait AVANT, dans le hook preStop du pod (Kubernetes) :
-    #   lifecycle.preStop.exec.command: ["sh", "-c", "touch /tmp/waffle-draining && sleep 5"]
-    # terminationGracePeriodSeconds doit dépasser le sommeil du preStop + grace_period.
-    # (Pas de `shutdown_delay` : FrankenPHP s'arrête dès SIGTERM, chaque requête PHP
-    # pendant ce délai répondrait 500 — mesuré sur FrankenPHP 1.12.7.)
+    # Arrêt gracieux (OPS-02, RFC-023 §3.4 et §5.1). À SIGTERM, Caddy attend
+    # `shutdown_delay`, ferme ses ports, puis laisse les requêtes en cours finir pendant
+    # `grace_period`. /readyz passe à 503 par l'un de deux chemins :
+    # - Kubernetes : le hook preStop du pod crée le marqueur de drainage AVANT SIGTERM
+    #     lifecycle.preStop.exec.command: ["sh", "-c", "touch /tmp/waffle-draining && sleep 5"]
+    #   terminationGracePeriodSeconds doit dépasser le sommeil du preStop + grace_period.
+    # - Sans hook preStop (Docker, Compose, ECS…) : CADDY_SHUTDOWN_DELAY, p. ex. 5s. Pendant
+    #   ce délai, Caddy répond 503 sur /readyz (bloc @drainage ci-dessous) et PHP sert le
+    #   reste. Le délai d'arrêt de l'orchestrateur doit dépasser shutdown_delay + grace_period.
+    # Défaut 0s : sous Kubernetes, le preStop a déjà fait la bascule. (FrankenPHP 1.12.7
+    # répondait 500 à toute requête PHP pendant shutdown_delay ; corrigé en 1.13.1, mesuré
+    # le 2026-10-22 sur 1.13.2. Vérification : scripts/drain-check.sh du monorepo.)
+    shutdown_delay {$CADDY_SHUTDOWN_DELAY:0s}
     grace_period {$CADDY_GRACE_PERIOD:25s}
 }
 
@@ -23,6 +29,18 @@
 {$SERVER_NAME:localhost} {
     root * public/
     encode zstd gzip
+
+    # Pendant shutdown_delay, /readyz répond 503 sans passer par PHP, avec le corps public
+    # de ProbeMiddleware : le répartiteur retire l'instance avant la fermeture des ports.
+    @drainage {
+        path /readyz
+        vars {http.shutting_down} true
+    }
+    handle @drainage {
+        header Content-Type application/json
+        header Cache-Control no-store
+        respond `{"status":"unavailable"}` 503
+    }
 
     php_server {
         # Configure le point d'entrée pour les URLs qui ne sont pas des fichiers
