@@ -28,6 +28,18 @@ waffle:
       allowed_origins: []
     ssrf:
       allowed_hosts: []
+    # Limiteur de débit coupé sous test : aucun Redis requis pour amorcer le kernel,
+    # et aucun quota partagé entre deux exécutions. Ses tests le construisent
+    # eux-mêmes (tests/src/Factory/RateLimitFactoryTest.php).
+    rate_limit:
+      enabled: false
+  # Reprises bornées et rapides sous test ; disjoncteur coupé pour la même raison
+  # que le limiteur (tests/src/Factory/HttpClientFactoryTest.php l'exerce).
+  http_client:
+    resilience:
+      max_attempts: 1
+    breaker:
+      enabled: false
   auth:
     # Hors prod : secret éphémère par processus si absent (fail-open dev/test only).
     secret: ''

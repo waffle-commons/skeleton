@@ -9,7 +9,6 @@ use App\Kernel;
 use App\Security\WebAuthn\InMemoryChallengeStore;
 use App\Security\WebAuthn\InMemoryCredentialRepository;
 use PDO;
-use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestFactoryInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ServerRequestFactoryInterface;
@@ -21,7 +20,7 @@ use Waffle\Commons\Async\DeferredTaskRunner;
 use Waffle\Commons\Auth\AuthenticationBridge;
 use Waffle\Commons\Auth\Authenticator\AssertionAuthenticator;
 use Waffle\Commons\Auth\Authenticator\JwtAuthenticator;
-use Waffle\Commons\Auth\Client\AuthenticatedClient;
+use Waffle\Commons\Auth\Client\AuthenticatedSettlingClient;
 use Waffle\Commons\Auth\Credential\AssertionCredentialsProvider;
 use Waffle\Commons\Auth\Jwt\JwtConfig;
 use Waffle\Commons\Auth\Jwt\JwtValidator;
@@ -56,7 +55,6 @@ use Waffle\Commons\Contracts\Data\Connection\RelationalConnectionPoolInterface;
 use Waffle\Commons\Contracts\Data\Migration\MigrationRunnerInterface;
 use Waffle\Commons\Contracts\Enum\Failsafe;
 use Waffle\Commons\Contracts\Handler\ArgumentResolverInterface;
-use Waffle\Commons\Contracts\HttpClient\ConcurrentClientInterface;
 use Waffle\Commons\Contracts\Reactive\BroadcastBufferInterface;
 use Waffle\Commons\Contracts\Security\Csrf\Constant as CsrfConstant;
 use Waffle\Commons\Contracts\Security\Csrf\CsrfTokenManagerInterface;
@@ -81,6 +79,7 @@ use Waffle\Commons\Http\Factory\ResponseFactory;
 use Waffle\Commons\Http\Factory\ServerRequestFactory;
 use Waffle\Commons\Http\Factory\StreamFactory;
 use Waffle\Commons\HttpClient\Client;
+use Waffle\Commons\HttpClient\Resilience\CircuitObservers;
 use Waffle\Commons\HttpClient\Security\SsrfGuard;
 use Waffle\Commons\Log\Channel\LogChannel;
 use Waffle\Commons\Log\StreamLogger;
@@ -268,11 +267,12 @@ final class AppKernelFactory
         $container->set(CsrfTokenManagerInterface::class, $csrfTokenManager);
 
         // Client HTTP PSR-18 brut (paquet waffle-commons/http-client). Il n'est
-        // PAS enregistré tel quel sous ClientInterface : il sert de transport
-        // interne au décorateur AuthenticatedClient du pont d'authentification,
-        // qui est enregistré comme ClientInterface plus bas (RFC-021 §4.7) —
-        // ainsi tout consommateur hérite de la propagation d'assertion sortante.
-        // Durci SEC-02 : un SsrfGuard résout et épingle chaque hôte sortant
+        // PAS enregistré tel quel : il sert de transport au décorateur
+        // AuthenticatedSettlingClient du pont d'authentification (RFC-021 §4.7),
+        // puis les deux sont enveloppés des décorateurs de résilience (étape 6-net)
+        // et enregistrés sous ClientInterface et ConcurrentClientInterface — ainsi
+        // tout consommateur hérite des reprises, du disjoncteur et de la propagation
+        // d'assertion sortante. Durci SEC-02 : un SsrfGuard résout et épingle chaque hôte sortant
         // (CURLOPT_RESOLVE anti-rebinding) et refuse toute adresse privée /
         // loopback / réservée. `waffle.security.ssrf.allowed_hosts` exempte les
         // backends internes de confiance (noms exacts ou CIDR ; vide ⇒ strict).
@@ -281,23 +281,26 @@ final class AppKernelFactory
         // Le traceur + le propagateur W3C sont passés au client : chaque requête
         // sortante porte alors le `traceparent` de la trace active (no-op par défaut ;
         // actif dès que le pont OTel est branché). SEC-02 SSRF reste en amont.
+        // Les délais de transfert (NET-02) viennent de `waffle.http_client.resilience.*` :
+        // jamais infinis, bornés par le contrat TimeoutPolicy.
         $httpClient = new Client(
             $responseFactory,
             $streamFactory,
             new SsrfGuard(allowedHosts: $ssrfAllowedHosts),
             $tracer,
             $tracePropagator,
-        );
+        )->withTimeouts(HttpClientFactory::timeouts($config));
         // ASYNC-02 : le même client implémente ConcurrentClientInterface (fan-out
-        // sortant en parallèle). Exposé sous le contrat de concurrence pour que les
+        // sortant en parallèle), exposé sous ce contrat à l'étape 6-net pour que les
         // consommateurs (ConcurrentDemoController) en dépendent sans le concret ;
         // une RequestFactory PSR-17 est fournie pour construire le lot de requêtes.
-        $container->set(ConcurrentClientInterface::class, $httpClient);
         $container->set(RequestFactoryInterface::class, new RequestFactory());
 
         // 3-bis. Pont d'Authentification Universel (RFC-021, paquet waffle-commons/auth) :
-        // schémas entrants + propagation sortante, câblés dans une fabrique dédiée.
-        $authBridge = self::wireUniversalAuthBridge($container, $config, $env, $httpClient);
+        // schémas entrants, câblés dans une fabrique dédiée. Le secret est résolu ici
+        // une seule fois : il sert aussi à la propagation sortante (étape 4-bis).
+        $authSecret = self::resolveAuthSecret($config, $env);
+        $authBridge = self::wireUniversalAuthBridge($container, $config, $authSecret);
 
         // 3. Instanciation de Security (paquet waffle-commons/security).
         $security = new Security($config);
@@ -315,6 +318,12 @@ final class AppKernelFactory
         /** @var SecurityContextInterface $securityContext */
         $securityContext = $container->get(SecurityContextInterface::class);
         $secureContainer = new SecureContainer($container, $security, $securityContext);
+
+        // 4-bis. Propagation sortante (RFC-021 §4.7) : le client PSR-18 est décoré —
+        // toute requête vers un hôte de `waffle.auth.assert_hosts` porte l'assertion
+        // signée quand une identité est active. La variante « settling » garde un lot
+        // concurrent sous les décorateurs de résilience (RFC-024 §3.3).
+        $authenticatedClient = self::buildAuthenticatedClient($config, $securityContext, $authSecret, $httpClient);
 
         // 5. Instanciation des middlewares du pipeline.
         $stack = new MiddlewareStack();
@@ -424,6 +433,10 @@ final class AppKernelFactory
         // du composant security garde la décision d'accès).
         $stack->add(middleware: new AuthenticationMiddleware($authBridge, $secureLogger));
 
+        // 5a-ratelimit. Limitation de débit (NET-01) : après l'authentification, pour
+        // compter par sujet quand il est connu, par IP cliente sinon. Désactivable.
+        RateLimitFactory::register($stack, $config, $securityContext, $responseFactory, $secureLogger);
+
         // 5b. Mise en place du dispatcher d'événements.
         $listenerProvider = new ListenerProvider();
         $eventDispatcher = new EventDispatcher($listenerProvider);
@@ -437,6 +450,21 @@ final class AppKernelFactory
         // 6. Logger du kernel. Le kernel lui-même est construit plus bas (étape 9),
         //    une fois tous ses collaborateurs prêts — injection par constructeur (ARCH-03).
         $kernelLogger = new StreamLogger(channel: LogChannel::CORE);
+
+        // 6-net. Résilience sortante (NET-02/03, RFC-024 §3.3) : les clients sortants
+        //     enregistrés sont RetryingClient(CircuitBreakerClient(…)) — reprises bornées
+        //     des méthodes idempotentes, disjoncteur par origine dont l'état vit dans
+        //     Redis. Ses transitions partent en événements PSR-14 (CircuitStateChanged)
+        //     et en métriques (/waffle-metrics) : il lui faut le dispatcher et le
+        //     registre, d'où sa place ici. Les identifiants restent sous les reprises,
+        //     réappliqués à chaque tentative.
+        HttpClientFactory::register(
+            $container,
+            $config,
+            $httpClient,
+            $authenticatedClient,
+            new CircuitObservers($eventDispatcher, $metricsRegistry, $kernelLogger),
+        );
 
         // 6-reactive (REACTIVE-01) + 6-async (ASYNC-01) : services et flushs
         // finish-request des axes temps réel et déferralisation, enregistrés AVANT
@@ -702,33 +730,29 @@ final class AppKernelFactory
     }
 
     /**
-     * Câble le Pont d'Authentification Universel (RFC-021).
+     * Câble le côté entrant du Pont d'Authentification Universel (RFC-021).
      *
-     * - Secret partagé fail-closed : absent ou < 32 octets ⇒ avortement du boot
-     *   en production (MissingAuthSecretException dans les constructeurs).
+     * - Secret partagé fail-closed : résolu par resolveAuthSecret() avant l'appel
+     *   (absent ou < 32 octets ⇒ avortement du boot en production).
      * - `SecurityContext` : porteur d'identité à portée requête — SEUL service
      *   mutable du pont. ResettableInterface ⇒ vidé à chaque boucle worker par
      *   AbstractKernel::reset() → Container::reset().
      * - Schémas entrants, par ordre de priorité : assertion de passerelle puis
      *   Bearer JWT (HS256, allow-list stricte, iss/aud épinglés). Ajoutez ici
      *   ApiKeyAuthenticator / BasicAuthenticator selon vos besoins.
-     * - Propagation sortante (RFC-021 §4.7) : le client PSR-18 est décoré —
-     *   toute requête vers un hôte de `waffle.auth.assert_hosts` porte
-     *   automatiquement l'assertion signée quand une identité est active.
+     *
+     * La propagation sortante est construite à part, par buildAuthenticatedClient().
      */
     private static function wireUniversalAuthBridge(
         Container $container,
         Config $config,
-        string $env,
-        Client $httpClient,
+        #[\SensitiveParameter]
+        string $authSecret,
     ): AuthenticationBridgeInterface {
-        $authSecret = self::resolveAuthSecret($config, $env);
-
         $securityContext = new SecurityContext();
         $container->set(SecurityContextInterface::class, $securityContext);
 
-        // Signataire / vérificateur d'assertions (HMAC-SHA256, X-Wfl-Assert-User).
-        $assertionSigner = new AuthBridgeSigner($authSecret);
+        // Vérificateur des assertions entrantes (HMAC-SHA256, X-Wfl-Assert-User).
         $assertionVerifier = new AuthBridgeVerifier($authSecret);
 
         $jwtValidator = new JwtValidator(
@@ -767,18 +791,34 @@ final class AppKernelFactory
         ]);
         $container->set(AuthenticationBridgeInterface::class, $authBridge);
 
+        return $authBridge;
+    }
+
+    /**
+     * Propagation sortante du pont (RFC-021 §4.7) : le client PSR-18 est décoré —
+     * toute requête vers un hôte de `waffle.auth.assert_hosts` porte automatiquement
+     * l'assertion signée quand une identité est active. La variante « settling »
+     * garde un lot concurrent sous les décorateurs de résilience (RFC-024 §3.3) :
+     * chaque requête du lot reçoit ses identifiants, le lot part d'un bloc.
+     */
+    private static function buildAuthenticatedClient(
+        Config $config,
+        SecurityContextInterface $securityContext,
+        #[\SensitiveParameter]
+        string $authSecret,
+        Client $httpClient,
+    ): AuthenticatedSettlingClient {
         /** @var list<string> $assertHosts */
         $assertHosts = $config->getArray(key: 'waffle.auth.assert_hosts') ?? [];
-        $container->set(ClientInterface::class, new AuthenticatedClient($httpClient, [
+
+        return new AuthenticatedSettlingClient($httpClient, [
             new AssertionCredentialsProvider(
-                signer: $assertionSigner,
+                signer: new AuthBridgeSigner($authSecret),
                 context: $securityContext,
                 allowedHosts: $assertHosts,
                 tenant: $config->getString('waffle.auth.tenant'),
             ),
-        ]));
-
-        return $authBridge;
+        ]);
     }
 
     /**

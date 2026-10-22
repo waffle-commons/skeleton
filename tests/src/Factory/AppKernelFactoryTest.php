@@ -7,10 +7,13 @@ namespace AppTests\Factory;
 use App\Factory\AppKernelFactory;
 use AppTests\AbstractTestCase;
 use PHPUnit\Framework\Attributes\Test;
+use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\ServerRequestFactoryInterface;
 use RuntimeException;
 use Waffle\Commons\Contracts\Constant\Constant;
 use Waffle\Commons\Contracts\Core\KernelInterface;
+use Waffle\Commons\Contracts\HttpClient\ConcurrentClientInterface;
+use Waffle\Commons\HttpClient\Resilience\RetryingClient;
 
 /**
  * FIX-01 #9 (audit Beta6) : régression du garde-fou fail-closed
@@ -149,5 +152,19 @@ final class AppKernelFactoryTest extends AbstractTestCase
             ServerRequestFactoryInterface::class,
             $kernel->container->get(ServerRequestFactoryInterface::class),
         );
+    }
+
+    /**
+     * NET-02/03 : les deux clients sortants du conteneur sont enveloppés des reprises
+     * (et du disjoncteur quand `waffle.http_client.breaker.enabled` est vrai) — le
+     * fan-out concurrent comme le client à propagation d'assertion.
+     */
+    #[Test]
+    public function the_kernel_container_provides_resilient_outbound_clients(): void
+    {
+        $kernel = AppKernelFactory::create(env: Constant::ENV_DEV, debug: true);
+
+        self::assertInstanceOf(RetryingClient::class, $kernel->container->get(ClientInterface::class));
+        self::assertInstanceOf(RetryingClient::class, $kernel->container->get(ConcurrentClientInterface::class));
     }
 }

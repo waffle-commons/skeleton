@@ -33,6 +33,8 @@ ENV APP_ENV=prod \
 # template documents.
 # pcntl : signaux POSIX (SIGTERM) pour les consommateurs CLI longue durée — l'arrêt
 # propre de `bin/waffle queue:work` (beta7 [QUEUE-02]) en dépend.
+# redis (phpredis) : l'état partagé entre workers — seaux du limiteur de débit (NET-01)
+# et circuits du disjoncteur (NET-03) — passe par le pool phpredis de waffle-commons/data.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     acl \
     file \
@@ -49,6 +51,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         pcntl \
         pdo_pgsql \
         pdo_mysql \
+        redis \
         zip \
         yaml \
     && echo "apc.enable_cli=1" >> "$PHP_INI_DIR/conf.d/docker-php-ext-apcu.ini" \

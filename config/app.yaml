@@ -48,6 +48,50 @@ waffle:
     # n'y placez QUE des backends que vous maîtrisez.
     ssrf:
       allowed_hosts: []
+    # Limitation de débit (NET-01, RFC-017 §3.1) : seau à jetons partagé dans Redis
+    # (jamais en mémoire du worker), compté par sujet authentifié, sinon par IP
+    # cliente. `capacity` requêtes par `period_seconds`, rafales comprises.
+    # `on_storage_failure` : open (laisse passer, journalisé) ou closed (503).
+    # `trusted_proxies` : adresses ou plages CIDR dont on lit X-Forwarded-For (vide ⇒
+    # REMOTE_ADDR seul). /healthz, /readyz et /waffle-metrics passent avant, hors quota.
+    rate_limit:
+      enabled: true
+      capacity: 120
+      period_seconds: 60
+      on_storage_failure: 'open'
+      trusted_proxies: []
+      redis_dsn: '%env(REDIS_DSN)%'    # redis://[:mot-de-passe@]hôte[:port]
+  # Client HTTP sortant (NET-02/03, RFC-024). Une clé absente prend la valeur par
+  # défaut du contrat.
+  http_client:
+    # Délais de chaque transfert, jamais infinis : 1 à 30000 ms pour la connexion,
+    # 1 à 120000 ms au total. Reprises des seules méthodes idempotentes (GET, HEAD,
+    # OPTIONS, PUT, DELETE, sauf `retry_non_idempotent`), sur échec réseau ou
+    # 429/502/503/504, avec un recul exponentiel à gigue complète plafonné à
+    # `max_delay_ms` ; un Retry-After peut dépasser ce plafond, et aucune attente
+    # ne démarre au-delà de `budget_ms`. `max_attempts: 1` coupe les reprises.
+    resilience:
+      connect_timeout_ms: 1000
+      total_timeout_ms: 10000
+      max_attempts: 3
+      base_delay_ms: 100
+      max_delay_ms: 2000
+      budget_ms: 15000
+      retry_non_idempotent: false
+    # Disjoncteur par origine (schéma, hôte, port), état partagé dans Redis : il
+    # s'ouvre quand `failure_rate_percent` % des appels échouent (réseau ou 5xx) sur
+    # `window_seconds`, à partir de `minimum_calls` appels ; ouvert, il répond 503
+    # sans connexion. Après `cool_down_seconds`, il laisse passer `half_open_trials`
+    # appel(s) d'essai : un succès le referme. Redis indisponible : il laisse
+    # passer, avec un avertissement et une métrique.
+    breaker:
+      enabled: true
+      failure_rate_percent: 50
+      minimum_calls: 10
+      window_seconds: 60
+      cool_down_seconds: 30
+      half_open_trials: 1
+      redis_dsn: '%env(REDIS_DSN)%'    # redis://[:mot-de-passe@]hôte[:port]
   # Pont d'Authentification Universel (RFC-021, paquet waffle-commons/auth).
   auth:
     # Secret partagé du pont (HMAC-SHA256) : signe les assertions d'identité

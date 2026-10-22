@@ -24,6 +24,7 @@
     "prefer-stable": true,
     "require": {
         "php": "^8.5",
+        "ext-redis": "*",
         "ext-yaml": "*",
         "ext-zend-opcache": "*",
         "waffle-commons/async": "self.version",
