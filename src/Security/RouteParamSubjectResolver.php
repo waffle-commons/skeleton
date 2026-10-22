@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Security;
 
 use Psr\Http\Message\ServerRequestInterface;
+use Waffle\Commons\Contracts\Constant\Constant;
 use Waffle\Commons\Contracts\Security\SubjectResolverInterface;
 
 /**
@@ -39,10 +40,9 @@ final readonly class RouteParamSubjectResolver implements SubjectResolverInterfa
     #[\Override]
     public function resolve(ServerRequestInterface $request): mixed
     {
-        // Clé littérale : reflète le nom d'attribut posé par la
-        // CoreRoutingMiddleware (contracts n'expose pas de constante
-        // ATTR_PARAMS à ce jour, et le producteur utilise aussi le littéral).
-        $params = $request->getAttribute('_params');
+        // Les paramètres de la route appariée, posés par la CoreRoutingMiddleware
+        // sous le nom que fixe le contrat (`_params`).
+        $params = $request->getAttribute(Constant::ATTR_PARAMS);
         if (!is_array($params) || $params === []) {
             // Route sans ressource : null ⇒ les voters votent sur la requête.
             return null;
