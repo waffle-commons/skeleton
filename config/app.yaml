@@ -147,5 +147,13 @@ waffle:
     # BENCH-04 : taille du pool pilotable pour le test de saturation. Interpolée
     # depuis DB_POOL_SIZE (.env / orchestrateur) ; absente ⇒ défaut 8.
     pool_size: '%env(DB_POOL_SIZE)%'
+    # [CARRY-01] Fenêtre de fraîcheur du ping, en millisecondes. Une connexion
+    # dont la vivacité a été prouvée (à l'ouverture ou par le ping) il y a moins
+    # de ce délai repart du pool sans nouveau `SELECT 1` : sous charge, le ping
+    # disparaît presque entièrement (deux allers-retours par emprunt sous
+    # PostgreSQL). Contrepartie : si la base coupe ses connexions, des requêtes
+    # peuvent échouer pendant au plus ce délai ; 0 ⇒ ping à chaque emprunt.
+    # Interpolée depuis DB_PING_FRESHNESS_MS ; absente ⇒ défaut 500.
+    ping_freshness_ms: '%env(DB_PING_FRESHNESS_MS)%'
     migrations_path: 'migrations'
 

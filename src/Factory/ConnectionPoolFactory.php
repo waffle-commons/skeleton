@@ -24,11 +24,21 @@ final class ConnectionPoolFactory
     private const int DEFAULT_POOL_SIZE = 8;
 
     /**
+     * [CARRY-01] : fenêtre de fraîcheur du ping par défaut, en millisecondes. Une
+     * connexion prouvée vivante (ouverte, ou ayant répondu au ping) il y a moins
+     * de 500 ms repart du pool sans nouveau `SELECT 1` — le seuil par défaut de
+     * HikariCP (`aliveBypassWindowMs`). Utilisée quand DB_PING_FRESHNESS_MS est
+     * absente ou invalide ; 0 rétablit le ping à chaque emprunt.
+     */
+    private const int DEFAULT_PING_FRESHNESS_MS = 500;
+
+    /**
      * Construit le pool de connexions PDO (RFC-022) à partir de `waffle.database.*`.
      *
      * La fabrique injectée n'ouvre une connexion que lorsque le pool en a besoin :
      * en mode worker FrankenPHP, les sockets restent tièdes entre les requêtes,
-     * sont sondés (« ping-before-dispense ») puis reconnectés de façon transparente.
+     * sont sondés (« ping-before-dispense », sauf dans la fenêtre de fraîcheur)
+     * puis reconnectés de façon transparente.
      */
     public static function create(Config $config, ?ConnectionTrackerInterface $tracker = null): PDOConnectionPool
     {
@@ -49,7 +59,7 @@ final class ConnectionPoolFactory
         // Fabrique sans état, rejouée à chaque création de connexion par le pool.
         return new PDOConnectionPool(factory: static fn(): PDO => new PDO($dsn, $username, $password, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        ]), maxConnections: self::resolvePoolSize($config), pingQuery: $ping, tracker: $tracker);
+        ]), maxConnections: self::resolvePoolSize($config), pingQuery: $ping, tracker: $tracker, pingFreshnessMs: self::resolvePingFreshness($config));
     }
 
     /**
@@ -61,14 +71,35 @@ final class ConnectionPoolFactory
      */
     public static function resolvePoolSize(Config $config): int
     {
-        $raw = $config->getString('waffle.database.pool_size');
+        return self::resolveInt($config, 'waffle.database.pool_size', 1, self::DEFAULT_POOL_SIZE);
+    }
+
+    /**
+     * [CARRY-01] : fenêtre de fraîcheur du ping, en millisecondes
+     * (`waffle.database.ping_freshness_ms`, interpolée depuis DB_PING_FRESHNESS_MS),
+     * validée en entier >= 0 — 0 est légitime et rétablit le ping à chaque
+     * emprunt. Absente, vide ou invalide ⇒ défaut 500.
+     */
+    public static function resolvePingFreshness(Config $config): int
+    {
+        return self::resolveInt($config, 'waffle.database.ping_freshness_ms', 0, self::DEFAULT_PING_FRESHNESS_MS);
+    }
+
+    /**
+     * Lit un entier de configuration interpolé depuis l'environnement (donc une
+     * chaîne). Absent, vide, non entier ou sous le minimum ⇒ le défaut : une
+     * valeur fautive n'empêche jamais le boot.
+     */
+    private static function resolveInt(Config $config, string $key, int $minimum, int $default): int
+    {
+        $raw = $config->getString($key);
         if ($raw === null || $raw === '') {
-            return self::DEFAULT_POOL_SIZE;
+            return $default;
         }
 
-        $size = filter_var($raw, FILTER_VALIDATE_INT);
+        $value = filter_var($raw, FILTER_VALIDATE_INT);
 
-        return is_int($size) && $size >= 1 ? $size : self::DEFAULT_POOL_SIZE;
+        return is_int($value) && $value >= $minimum ? $value : $default;
     }
 
     /**

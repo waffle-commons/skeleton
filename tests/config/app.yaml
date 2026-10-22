@@ -76,4 +76,7 @@ waffle:
     # BENCH-04 : interpolée depuis DB_POOL_SIZE — reste `null` (⇒ défaut 8) tant
     # que la variable n'est pas injectée dans le registre d'env du test.
     pool_size: '%env(DB_POOL_SIZE)%'
+    # [CARRY-01] : interpolée depuis DB_PING_FRESHNESS_MS — reste `null` (⇒ défaut
+    # 500) tant que la variable n'est pas injectée dans le registre d'env du test.
+    ping_freshness_ms: '%env(DB_PING_FRESHNESS_MS)%'
     migrations_path: 'migrations'

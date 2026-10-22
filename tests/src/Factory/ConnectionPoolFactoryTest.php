@@ -59,6 +59,43 @@ final class ConnectionPoolFactoryTest extends AbstractTestCase
         self::assertSame(8, ConnectionPoolFactory::resolvePoolSize(self::configWithEnv(['DB_POOL_SIZE' => ''])));
     }
 
+    #[Test]
+    public function ping_freshness_defaults_to_500_ms_when_db_ping_freshness_ms_is_absent(): void
+    {
+        self::assertSame(500, ConnectionPoolFactory::resolvePingFreshness(self::configWithEnv([])));
+    }
+
+    #[Test]
+    public function ping_freshness_reads_a_valid_window_zero_included(): void
+    {
+        self::assertSame(
+            250,
+            ConnectionPoolFactory::resolvePingFreshness(self::configWithEnv([
+                'DB_PING_FRESHNESS_MS' => '250',
+            ])),
+        );
+        // 0 est légitime (CARRY-01) : il rétablit le ping à chaque emprunt.
+        self::assertSame(
+            0,
+            ConnectionPoolFactory::resolvePingFreshness(self::configWithEnv([
+                'DB_PING_FRESHNESS_MS' => '0',
+            ])),
+        );
+    }
+
+    #[Test]
+    public function ping_freshness_falls_back_to_500_ms_when_invalid(): void
+    {
+        foreach (['-1', 'cinq-cents', ''] as $invalid) {
+            self::assertSame(
+                500,
+                ConnectionPoolFactory::resolvePingFreshness(self::configWithEnv([
+                    'DB_PING_FRESHNESS_MS' => $invalid,
+                ])),
+            );
+        }
+    }
+
     /**
      * Configuration de fixture dont chaque valeur `waffle.database.*` est
      * interpolée depuis le registre d'environnement : un seul fichier suffit
