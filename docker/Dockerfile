@@ -4,12 +4,12 @@
 # Waffle Framework - Multi-Stage Dockerfile
 # Supports both Development (with Xdebug) and Production (Optimized).
 #
-ARG FRANKEN_VERSION='1.12.7'
+ARG FRANKEN_VERSION='1.13.2'
 ARG PHP_VERSION='8'
 ARG OS='trixie'
 # Digest de l'image de base : une étiquette bouge, un digest non (build reproductible et hors ligne).
 # À mettre à jour avec FRANKEN_VERSION : scripts/images-pin.py --pull indique le nouveau digest.
-ARG FRANKEN_DIGEST='@sha256:81231b570830952baa3e62db06707996a886ff0a61ca64c77d032c8a110e6bc1'
+ARG FRANKEN_DIGEST='@sha256:8a7a935deb33959200628497b8201423c8b777d513a62ac1b69a91c624afdb3d'
 
 # -----------------------------------------------------------------------------
 # Stage 1: Base (Shared Runtime)

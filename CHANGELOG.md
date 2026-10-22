@@ -21,6 +21,9 @@ Released in lockstep with the Waffle Commons umbrella tag.
 - **The production image can run `db:migrate`.** The prod stage now copies `bin/` and `migrations/`, so a Kubernetes Job runs `php bin/waffle db:migrate` from the release image (OPS-03, RFC-014).
 - **A fresh clone builds (CARRY-08).** The builder copied `composer.lock`, which the skeleton does not version, so `docker build` failed at that `COPY`; it is now optional (`composer.lock*`). A project made by `composer create-project` carries the chosen version in its composer.json and builds as is; the skeleton's own repository requires `self.version`, which Composer cannot resolve without `.git` or a lock, so building it from a fresh clone takes `--build-arg COMPOSER_ROOT_VERSION=…`.
 
+### Security
+- **The image runs FrankenPHP 1.13.2 on PHP 8.5.12** (was 1.12.7 on PHP 8.5.11), with the base image still pinned by digest. PHP 8.5.12 fixes PHP2Shell (CVE-2026-109618 and CVE-2026-109619), two critical unauthenticated remote code executions that only the upgrade fixes. FrankenPHP 1.13.x also fixes its own advisories since 1.12.7, among them header spoofing through dot-form names (GHSA-qcrp-8483-f2f2), `putenv()` leaking across requests (GHSA-996f-w38m-f574) and, in worker mode, `error_get_last()` / `libxml_get_errors()` carrying a previous client's data into the next request (GHSA-4gfw-9v29-gp9h). It ships Caddy 2.11.7, which caps request headers at 16 KiB and drops header names that contain a dot. A project generated from an earlier skeleton gets the fix by setting the same `FRANKEN_VERSION` and `FRANKEN_DIGEST` in its `docker/Dockerfile`.
+
 ## [0.1.0-beta6] — 2026-09
 
 **Theme: audit remediation, and the template defects a real benchmark exposed.**
