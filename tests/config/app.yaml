@@ -65,10 +65,12 @@ waffle:
   database:
     # Valeurs littérales : le pool est paresseux, aucune connexion n'est ouverte
     # au boot ni sur une requête GET (le middleware transactionnel n'enveloppe que
-    # les écritures).
+    # les écritures). Port 1 : rien n'y écoute, sur aucune machine de test ; le
+    # pool est donc toujours injoignable, et ProbeEndpointsTest vérifie que /readyz
+    # le dit (503) au lieu d'accepter les deux verdicts.
     driver: 'pgsql'
     host: '127.0.0.1'
-    port: '5432'
+    port: '1'
     database: 'waffle_test'
     username: 'waffle'
     password: ''

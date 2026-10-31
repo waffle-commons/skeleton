@@ -17,8 +17,8 @@ use Waffle\Commons\Http\Factory\ServerRequestFactory;
  * `waffle.health.required`, et les deux passent avant le contrôle d'hôte (la sonde
  * kubelet porte l'IP du pod en Host).
  *
- * La configuration de test pointe la base sur 127.0.0.1 : selon l'environnement, le
- * pool répond ou non. Les tests vérifient donc la forme du rapport, pas son verdict.
+ * La configuration de test pointe la base sur le port 1 de 127.0.0.1, où rien
+ * n'écoute : le pool exigé est toujours injoignable, et /readyz doit le dire (503).
  */
 final class ProbeEndpointsTest extends AbstractTestCase
 {
@@ -43,11 +43,11 @@ final class ProbeEndpointsTest extends AbstractTestCase
     }
 
     #[Test]
-    public function readiness_reports_the_required_pool_to_localhost(): void
+    public function readiness_fails_closed_on_an_unreachable_required_pool(): void
     {
         $response = $this->handle('http://localhost/readyz', '127.0.0.1');
 
-        self::assertContains($response->getStatusCode(), [200, 503]);
+        self::assertSame(503, $response->getStatusCode());
         $report = json_decode((string) $response->getBody(), true, flags: JSON_THROW_ON_ERROR);
         self::assertIsArray($report);
         self::assertSame([], $report['missing'] ?? null);
@@ -56,7 +56,7 @@ final class ProbeEndpointsTest extends AbstractTestCase
         $pool = $checks['db.pool'] ?? null;
         self::assertIsArray($pool);
         self::assertTrue($pool['critical'] ?? null);
-        self::assertContains($pool['status'] ?? null, ['up', 'down']);
+        self::assertSame('down', $pool['status'] ?? null);
         // Cache « array » en configuration de test : aucune sonde de cache enregistrée.
         self::assertArrayNotHasKey('cache', $checks);
     }
@@ -66,8 +66,8 @@ final class ProbeEndpointsTest extends AbstractTestCase
     {
         $response = $this->handle('http://10.1.2.3/readyz', '203.0.113.9');
 
-        self::assertContains($response->getStatusCode(), [200, 503]);
-        self::assertContains((string) $response->getBody(), ['{"status":"ok"}', '{"status":"unavailable"}']);
+        self::assertSame(503, $response->getStatusCode());
+        self::assertSame('{"status":"unavailable"}', (string) $response->getBody());
     }
 
     #[Test]
