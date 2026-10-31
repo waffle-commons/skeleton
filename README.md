@@ -213,6 +213,17 @@ php bin/waffle db:rollback --steps=1              # reverts the most recent vers
 
 Each migration runs in its own transaction and is recorded in a `waffle_migrations` table, so re-runs skip already-applied scripts; a script that holds only comments is refused, never recorded. The skeleton ships a sample `migrations/Version2026053101_CreateUsersTable.sql` and its down script to get you started. See the [Database Migrations how-to](https://github.com/waffle-commons/documentation/blob/main/how-to/database-migrations.md) for the full workflow and the transactional-DDL caveat on MySQL, MariaDB and Oracle.
 
+📖 API Documentation (OpenAPI)
+------------------------------
+
+`waffle-commons/openapi` (a development dependency) describes your routes and their `#[Dto]` bodies as an OpenAPI 3.1 document, with no hand-written YAML:
+
+```shell
+php bin/waffle openapi:generate --output=public/openapi.json   # or --output=- for the standard output
+```
+
+In debug mode only, the application also serves `/_docs` (Swagger UI) and `/_docs/openapi.json` (the document generated from the routes at that moment); `ApiDocsFactory` mounts them, and production, which refuses debug mode, never does. The `#[OA\Operation]`, `#[OA\Response]` and `#[OA\Property]` attributes from `Waffle\Commons\Contracts\OpenApi\Attribute` add summaries, tags, extra responses and field descriptions; see the [openapi README](https://github.com/waffle-commons/openapi#readme).
+
 👩‍💻 Usage Example
 -------------------
 
