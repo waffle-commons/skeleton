@@ -107,8 +107,9 @@ final class ConnectionPoolFactory
      *
      * PostgreSQL ne reconnaît pas l'attribut DSN `charset` (l'encodage client est
      * négocié avec le serveur — UTF8 par défaut) ; SQLite n'attend qu'un chemin de
-     * fichier ; SQL Server et Oracle ont leur propre grammaire de DSN. Le format
-     * MySQL/MariaDB reste le cas par défaut.
+     * fichier ; SQL Server et Oracle ont leur propre grammaire de DSN. MySQL et
+     * MariaDB partagent la leur ; tout autre pilote reçoit la forme commune, sous
+     * son propre nom.
      */
     private static function buildDsn(
         string $driver,
@@ -122,8 +123,8 @@ final class ConnectionPoolFactory
             'sqlite' => sprintf('sqlite:%s', $database),
             'sqlsrv' => sprintf('sqlsrv:Server=%s,%s;Database=%s', $host, $port, $database),
             'oci' => sprintf('oci:dbname=//%s:%s/%s;charset=%s', $host, $port, $database, $charset),
-            // MariaDB shares MySQL's DSN grammar, so both are named explicitly
-            // rather than relying on the fallback.
+            // MariaDB partage la grammaire DSN de MySQL : les deux sont nommés
+            // explicitement plutôt que confiés au cas par défaut.
             'mysql', 'mariadb' => sprintf(
                 'mysql:host=%s;port=%s;dbname=%s;charset=%s',
                 $host,
@@ -131,11 +132,9 @@ final class ConnectionPoolFactory
                 $database,
                 $charset,
             ),
-            // Any other PDO driver gets the common `driver:host=…` shape with
-            // ITS OWN name. The previous fallback emitted a `mysql:` DSN for
-            // every unrecognised value, so a typo like `postgres` silently
-            // produced a MySQL connection attempt and failed somewhere far from
-            // the mistake.
+            // Tout autre pilote PDO reçoit la forme commune `pilote:host=…` sous SON
+            // nom : une faute de frappe comme `postgres` échoue sur ce nom, au lieu
+            // d'une tentative de connexion MySQL qui échouerait loin de l'erreur.
             default => sprintf('%s:host=%s;port=%s;dbname=%s', $driver, $host, $port, $database),
         };
     }
