@@ -525,6 +525,8 @@ final class AppKernelFactory
             // middleware se contente de déclencher l'analyse et de journaliser
             // les refus, y compris un échec fail-closed du résolveur.
             $secureMiddleware = new SecurityMiddleware(secureContainer: $secureContainer, logger: $secureLogger);
+            // [API-01] Documentation de développement (/_docs), en debug seulement, juste avant le routage.
+            ApiDocsFactory::register($stack, $router, $responseFactory, $streamFactory, $debug);
             $stack->add(middleware: $routingMiddleware);
             // Le CsrfMiddleware doit s'exécuter après Routing (il lit `_classname`
             // et `_method` pour repérer #[RequiresCsrfToken]) et avant Security.

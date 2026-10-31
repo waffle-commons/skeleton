@@ -37,6 +37,7 @@ use Waffle\Commons\Data\Compiler\SQLDialect;
 use Waffle\Commons\Data\Migration\MigrationRunner;
 use Waffle\Commons\Data\Query\Query;
 use Waffle\Commons\Data\Warmup\QueryWarmer;
+use Waffle\Commons\OpenApi\Command\GenerateCommand;
 use Waffle\Commons\Routing\Router;
 use Waffle\Commons\Contracts\Data\Connection\ConnectionPoolInterface;
 use Waffle\Commons\Contracts\Data\Migration\MigrationRunnerInterface;
@@ -136,5 +137,12 @@ $app->add(command: new DataWarmupCommand(warmers: [
 // (repli obligatoire RFC-019), donc le défaut dev reste inchangé.
 $app->add(command: new ContainerCompileCommand(container: $container));
 $app->add(command: new RouteCompileCommand(router: $router->boot(container: $secureContainer)));
+
+// [API-01] `openapi:generate` décrit en OpenAPI 3.1 les routes et leurs DTO
+// (`--output=public/openapi.json`, ou `-` pour la sortie standard). Le composant est
+// une dépendance de développement : une installation `--no-dev` n'a pas la commande.
+if (class_exists(GenerateCommand::class)) {
+    $app->add(command: new GenerateCommand(router: $router->boot(container: $secureContainer)));
+}
 
 exit($app->run());
