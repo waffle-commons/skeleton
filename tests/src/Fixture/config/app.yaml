@@ -12,3 +12,4 @@ waffle:
     password: '%env(DB_PASSWORD)%'
     charset: '%env(DB_CHARSET)%'
     pool_size: '%env(DB_POOL_SIZE)%'
+    connect_timeout: '%env(DB_CONNECT_TIMEOUT)%'

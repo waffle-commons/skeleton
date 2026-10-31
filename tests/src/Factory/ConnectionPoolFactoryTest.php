@@ -12,6 +12,7 @@ use PHPUnit\Framework\Attributes\Test;
 use Waffle\Commons\Config\Config;
 use Waffle\Commons\Contracts\Constant\Constant;
 use Waffle\Commons\Data\Connection\PDOConnectionPool;
+use Waffle\Commons\Data\Exception\DatabaseException;
 
 /**
  * BENCH-04 : la taille du pool PDO est pilotée par DB_POOL_SIZE, qui suit le
@@ -93,6 +94,49 @@ final class ConnectionPoolFactoryTest extends AbstractTestCase
                     'DB_PING_FRESHNESS_MS' => $invalid,
                 ])),
             );
+        }
+    }
+
+    #[Test]
+    public function connect_timeout_defaults_to_two_seconds_and_reads_a_valid_value(): void
+    {
+        self::assertSame(2, ConnectionPoolFactory::resolveConnectTimeout(self::configWithEnv([])));
+        self::assertSame(
+            5,
+            ConnectionPoolFactory::resolveConnectTimeout(self::configWithEnv(['DB_CONNECT_TIMEOUT' => '5'])),
+        );
+        // Zéro supprimerait le délai (attente illimitée) : refusé, comme une valeur non numérique.
+        foreach (['0', '-3', 'deux', ''] as $invalid) {
+            self::assertSame(
+                2,
+                ConnectionPoolFactory::resolveConnectTimeout(self::configWithEnv(['DB_CONNECT_TIMEOUT' => $invalid])),
+            );
+        }
+    }
+
+    /**
+     * RFC-023 §3.2 : une base qui ne répond jamais (10.255.255.1 ne répond à aucun
+     * SYN) fait échouer l'emprunt dans le délai de connexion, au lieu de bloquer le
+     * worker — et la sonde /readyz — pendant les minutes du délai TCP du système.
+     */
+    #[Test]
+    public function a_database_that_never_answers_fails_within_the_connect_timeout(): void
+    {
+        $pool = ConnectionPoolFactory::create(self::configWithFixture([
+            'DB_DRIVER' => 'pgsql',
+            'DB_HOST' => '10.255.255.1',
+            'DB_PORT' => '5432',
+            'DB_DATABASE' => 'waffle_test',
+            'DB_USERNAME' => 'waffle',
+            'DB_CONNECT_TIMEOUT' => '2',
+        ]));
+        $start = hrtime(true);
+
+        try {
+            $pool->acquire();
+            self::fail('A database that never answers cannot lend a connection.');
+        } catch (DatabaseException) {
+            self::assertLessThan(5.0, (hrtime(true) - $start) / 1e9);
         }
     }
 

@@ -59,6 +59,28 @@ final class RedisPoolFactoryTest extends AbstractTestCase
         self::assertSame(1, $pool->idleCount());
     }
 
+    /**
+     * RFC-023 §3.2 : chaque lecture attend au plus une seconde par défaut ; `null`
+     * laisse le délai de PHP à un client qui bloque plus longtemps (un `queue:work`).
+     */
+    #[Test]
+    public function a_lease_reads_with_a_one_second_timeout_unless_told_otherwise(): void
+    {
+        $pool = RedisPoolFactory::create(self::REDIS);
+        $lease = $pool->acquire();
+        $client = $lease->client();
+        self::assertInstanceOf(Redis::class, $client);
+        self::assertSame(RedisPoolFactory::READ_TIMEOUT, $client->getOption(Redis::OPT_READ_TIMEOUT));
+        $pool->release($lease);
+
+        $blocking = RedisPoolFactory::create(self::REDIS, null);
+        $lease = $blocking->acquire();
+        $client = $lease->client();
+        self::assertInstanceOf(Redis::class, $client);
+        self::assertNotSame(RedisPoolFactory::READ_TIMEOUT, $client->getOption(Redis::OPT_READ_TIMEOUT));
+        $blocking->release($lease);
+    }
+
     #[Test]
     public function the_dsn_password_is_sent_with_auth(): void
     {

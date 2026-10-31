@@ -81,4 +81,7 @@ waffle:
     # [CARRY-01] : interpolée depuis DB_PING_FRESHNESS_MS — reste `null` (⇒ défaut
     # 500) tant que la variable n'est pas injectée dans le registre d'env du test.
     ping_freshness_ms: '%env(DB_PING_FRESHNESS_MS)%'
+    # RFC-023 §3.2 : interpolé depuis DB_CONNECT_TIMEOUT — reste `null` (⇒ défaut 2)
+    # tant que la variable n'est pas injectée dans le registre d'env du test.
+    connect_timeout: '%env(DB_CONNECT_TIMEOUT)%'
     migrations_path: 'migrations'

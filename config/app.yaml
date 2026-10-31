@@ -155,5 +155,11 @@ waffle:
     # peuvent échouer pendant au plus ce délai ; 0 ⇒ ping à chaque emprunt.
     # Interpolée depuis DB_PING_FRESHNESS_MS ; absente ⇒ défaut 500.
     ping_freshness_ms: '%env(DB_PING_FRESHNESS_MS)%'
+    # Délai d'ouverture d'une connexion, en secondes (PostgreSQL, MySQL, MariaDB).
+    # Sans lui, une base qui ne répond plus bloque le worker plusieurs minutes, sonde
+    # /readyz comprise (RFC-023 §3.2) ; il doit rester plus court que le
+    # `timeoutSeconds` de la sonde de disponibilité. Interpolé depuis
+    # DB_CONNECT_TIMEOUT ; absent ou invalide ⇒ défaut 2 (le minimum de libpq).
+    connect_timeout: '%env(DB_CONNECT_TIMEOUT)%'
     migrations_path: 'migrations'
 
