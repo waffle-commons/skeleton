@@ -38,6 +38,7 @@ Released in lockstep with the Waffle Commons umbrella tag.
 
 ### Security
 - **The image runs FrankenPHP 1.13.2 on PHP 8.5.12** (was 1.12.7 on PHP 8.5.11), with the base image still pinned by digest. PHP 8.5.12 fixes PHP2Shell (CVE-2026-109618 and CVE-2026-109619), two critical unauthenticated remote code executions that only the upgrade fixes. FrankenPHP 1.13.x also fixes its own advisories since 1.12.7, among them header spoofing through dot-form names (GHSA-qcrp-8483-f2f2), `putenv()` leaking across requests (GHSA-996f-w38m-f574) and, in worker mode, `error_get_last()` / `libxml_get_errors()` carrying a previous client's data into the next request (GHSA-4gfw-9v29-gp9h). It ships Caddy 2.11.7, which caps request headers at 16 KiB and drops header names that contain a dot. A project generated from an earlier skeleton gets the fix by setting the same `FRANKEN_VERSION` and `FRANKEN_DIGEST` in its `docker/Dockerfile`.
+- **Composer is pinned by digest.** The dev and builder stages copied it from `composer:latest`, a tag that moves, so two builds of one commit could get different Composers. Both stages now copy `composer:2.10.3` by its digest; change the version and the digest together, as Docker resolves `tag@digest` by the digest alone.
 
 ## [0.1.0-beta6] — 2026-09
 
