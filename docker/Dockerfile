@@ -85,7 +85,9 @@ RUN echo "xdebug.start_with_request=yes" >> $PHP_INI_DIR/conf.d/docker-php-ext-x
     && echo "xdebug.log=/tmp/xdebug.log" >> $PHP_INI_DIR/conf.d/docker-php-ext-xdebug.ini
 
 # Install Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Version épinglée par digest, comme les autres images : changer la version ET le digest ensemble
+# (Docker résout `tag@digest` par le seul digest ; voir scripts/images-pin.py dans l'umbrella).
+COPY --from=composer:2.10.3@sha256:da624c2c705d54e2f5a9bb77a5dc6c7d091711433ebefd7035672e84c2010fee /usr/bin/composer /usr/bin/composer
 
 # Create a non-root user for development (DX Best Practice)
 # This aligns permissions with the host Linux user
@@ -102,7 +104,8 @@ CMD [ "frankenphp", "run", "--config", "/etc/caddy/Caddyfile" ]
 # -----------------------------------------------------------------------------
 FROM base AS builder
 
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Même Composer épinglé qu'à l'étape dev.
+COPY --from=composer:2.10.3@sha256:da624c2c705d54e2f5a9bb77a5dc6c7d091711433ebefd7035672e84c2010fee /usr/bin/composer /usr/bin/composer
 
 # Copy only manifests to optimize Docker cache
 # Le verrou est facultatif (CARRY-08) : le squelette ne le versionne pas (cible de
