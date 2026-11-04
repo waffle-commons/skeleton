@@ -18,6 +18,7 @@ use App\Factory\AppKernelFactory;
 use Composer\InstalledVersions;
 use Waffle\Commons\Auth\SecurityContext;
 use Waffle\Commons\Config\Config;
+use Waffle\Commons\Config\DotEnv;
 use Waffle\Commons\Console\Command\CacheClearCommand;
 use Waffle\Commons\Console\Command\ContainerCompileCommand;
 use Waffle\Commons\Console\Command\DataWarmupCommand;
@@ -52,9 +53,12 @@ require_once __DIR__ . '/../vendor/autoload.php';
 $root = dirname(path: __DIR__);
 $rootConfig = $root . DIRECTORY_SEPARATOR . 'config';
 
-// Mise en place du framework
+// Mise en place du framework. Le registre d'environnement fusionne .env avec
+// l'environnement du processus (le processus l'emporte) : les `%env(...)%`, comme
+// les identifiants de base de données RFC-022, se résolvent en CLI comme en HTTP.
 $container = new Container();
-$config = new Config(configDir: $rootConfig, environment: Constant::ENV_DEV);
+$envRegistry = array_merge(new DotEnv(path: $root)->load(), getenv());
+$config = new Config(configDir: $rootConfig, environment: Constant::ENV_DEV, env: $envRegistry);
 $security = new Security($config);
 // AUTHZ-01 : la CLI n'authentifie personne ; un SecurityContext vierge satisfait
 // le SecureContainer (les voters #[Voter] ne s'exécutent pas hors requête HTTP).
