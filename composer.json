@@ -73,7 +73,8 @@
         ],
         "igor": "vendor/bin/igor-php .",
         "post-create-project-cmd": [
-            "Scripts\\Setup::postCreateProject"
+            "Scripts\\Setup::postCreateProject",
+            "@composer update --lock --no-interaction --no-plugins --no-scripts --ignore-platform-req=ext-redis --ignore-platform-req=ext-yaml"
         ],
         "post-install-cmd": [
             "Scripts\\Setup::postInstall"
