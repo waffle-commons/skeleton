@@ -6,6 +6,8 @@
 # boot (le pool PDO est paresseux), secrets éphémères tolérés hors production.
 waffle:
   env: 'test'
+  # Hors prod : sans APP_SECRET ni secret CSRF, la clé CSRF est éphémère par processus.
+  secret: ''
   trusted_hosts:
     - localhost
   # Sondes d'orchestrateur (OPS-01, RFC-023) : /healthz (vivacité) et /readyz

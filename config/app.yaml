@@ -2,6 +2,11 @@
 waffle:
   # Environnement applicatif (dev, prod, test). Renseigné par la variable d'environnement serveur.
   env: '%env(APP_ENV)%'
+  # Secret racine de l'application (APP_SECRET), 32 octets ou plus. La clé CSRF en
+  # dérive (HKDF-SHA256) quand security.csrf.secret est vide ; sans l'un ni l'autre,
+  # la production refuse de démarrer. Le secret du pont d'authentification
+  # (auth.secret), partagé avec d'autres services, n'en dérive jamais.
+  secret: '%env(APP_SECRET)%'
   # Durcissement sécurité : hôtes de confiance.
   # Liste des domaines autorisés. Si vide, tous les hôtes sont acceptés (DEV uniquement).
   # En PROD, ce paramètre DOIT être renseigné pour prévenir l'injection d'en-tête Host.
@@ -27,10 +32,10 @@ waffle:
     # d'attribut #[Rule]. 10 = toutes les règles cumulées (le plus strict).
     level: 10
     csrf:
-      # Secret de signature de 32 octets ou plus pour les jetons CSRF HMAC sans état (Beta-1 / SEC-01).
-      # Résolu depuis l'env WAFFLE_CSRF_SECRET. En prod, un secret absent ou trop
-      # court avorte le boot — renseignez-le dans votre manifeste de déploiement
-      # avant la mise en ligne.
+      # Clé de signature des jetons CSRF HMAC sans état (Beta-1 / SEC-01), 32 octets
+      # ou plus, résolue depuis l'env WAFFLE_CSRF_SECRET. Facultative : vide, elle
+      # dérive de waffle.secret (APP_SECRET), la même dans chaque worker. En prod, une
+      # valeur trop courte, ou ni l'une ni l'autre, avorte le boot.
       secret: '%env(WAFFLE_CSRF_SECRET)%'
     # CORS fail-closed (SEC-04) : liste blanche d'origines exactes
     # (scheme://host[:port]). Vide par défaut ⇒ toute requête cross-origin est

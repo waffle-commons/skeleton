@@ -40,7 +40,6 @@ use Waffle\Commons\Config\Exception\InvalidConfigurationException;
 use Waffle\Commons\Container\Container;
 use Waffle\Commons\Contracts\Async\TaskRunnerInterface;
 use Waffle\Commons\Contracts\Auth\AuthenticationBridgeInterface;
-use Waffle\Commons\Contracts\Auth\Constant as AuthConstant;
 use Waffle\Commons\Contracts\Auth\SecurityContextInterface;
 use Waffle\Commons\Contracts\Auth\WebAuthn\CredentialRepositoryInterface;
 use Waffle\Commons\Contracts\Cache\CacheInterface;
@@ -56,7 +55,6 @@ use Waffle\Commons\Contracts\Data\Migration\MigrationRunnerInterface;
 use Waffle\Commons\Contracts\Enum\Failsafe;
 use Waffle\Commons\Contracts\Handler\ArgumentResolverInterface;
 use Waffle\Commons\Contracts\Reactive\BroadcastBufferInterface;
-use Waffle\Commons\Contracts\Security\Csrf\Constant as CsrfConstant;
 use Waffle\Commons\Contracts\Security\Csrf\CsrfTokenManagerInterface;
 use Waffle\Commons\Contracts\Service\ReflectionServiceInterface;
 use Waffle\Commons\Contracts\Telemetry\Metrics\MetricsCollectorInterface;
@@ -136,8 +134,8 @@ final class AppKernelFactory
     public static function create(string $env = Constant::ENV_PROD, bool $debug = false): KernelInterface
     {
         // FIX-01 #9 (Beta6 audit) : avortement fail-closed si la production et le
-        // mode debug coïncident — même discipline que resolveCsrfSecret() /
-        // resolveAuthSecret() ci-dessous. $debug fait fuiter des traces d'erreur
+        // mode debug coïncident — même discipline que SecretFactory::csrf() /
+        // SecretFactory::auth() ci-dessous. $debug fait fuiter des traces d'erreur
         // détaillées (JsonErrorRenderer) : jamais acceptable en production, même
         // par erreur de configuration (.env livre APP_DEBUG=true par défaut pour
         // le confort du développement local).
@@ -261,10 +259,10 @@ final class AppKernelFactory
         }
 
         // SEC-01 (Beta-1, option C) : gestionnaire CSRF sans état, basé sur un HMAC
-        // lié à un SID anonyme par navigateur. Le secret vient de la config (avec
-        // interpolation d'env) ou, à défaut, d'un getenv() direct ; absent ou trop
-        // court ⇒ avortement du boot en production.
-        $csrfTokenManager = new CsrfTokenManager(secret: self::resolveCsrfSecret($config, $env));
+        // lié à un SID anonyme par navigateur. La clé est WAFFLE_CSRF_SECRET, ou à
+        // défaut dérive d'APP_SECRET (SecretFactory::csrf()) ; sans l'un ni l'autre,
+        // la production refuse de démarrer.
+        $csrfTokenManager = new CsrfTokenManager(secret: SecretFactory::csrf($config, $env));
         $container->set(CsrfTokenManagerInterface::class, $csrfTokenManager);
 
         // Client HTTP PSR-18 brut (paquet waffle-commons/http-client). Il n'est
@@ -300,7 +298,7 @@ final class AppKernelFactory
         // 3-bis. Pont d'Authentification Universel (RFC-021, paquet waffle-commons/auth) :
         // schémas entrants, câblés dans une fabrique dédiée. Le secret est résolu ici
         // une seule fois : il sert aussi à la propagation sortante (étape 4-bis).
-        $authSecret = self::resolveAuthSecret($config, $env);
+        $authSecret = SecretFactory::auth($config, $env);
         $authBridge = self::wireUniversalAuthBridge($container, $config, $authSecret);
 
         // 3. Instanciation de Security (paquet waffle-commons/security).
@@ -709,47 +707,9 @@ final class AppKernelFactory
     }
 
     /**
-     * Résout le secret de signature CSRF avec des fallbacks raisonnables. La
-     * config gagne ; sinon on lit directement l'environnement. La production
-     * refuse de démarrer si le secret est absent ou plus court que
-     * `CsrfConstant::MIN_SECRET_BYTES` ; en hors-prod, un secret aléatoire
-     * éphémère permet à dev/test de démarrer proprement.
-     */
-    private static function resolveCsrfSecret(Config $config, string $env): string
-    {
-        $fromConfig = $config->getString('waffle.security.csrf.secret');
-        $candidate = is_string($fromConfig) && $fromConfig !== '' ? $fromConfig : null;
-
-        if ($candidate === null) {
-            $fromEnv = getenv(CsrfConstant::SECRET_ENV_KEY);
-            if (is_string($fromEnv) && $fromEnv !== '') {
-                $candidate = $fromEnv;
-            }
-        }
-
-        if ($candidate !== null && strlen($candidate) >= CsrfConstant::MIN_SECRET_BYTES) {
-            return $candidate;
-        }
-
-        if ($env === Constant::ENV_PROD) {
-            throw new RuntimeException(sprintf(
-                'Secret CSRF manquant ou plus court que %d octets en production. '
-                . 'Renseignez "waffle.security.csrf.secret" ou la variable d\'environnement %s.',
-                CsrfConstant::MIN_SECRET_BYTES,
-                CsrfConstant::SECRET_ENV_KEY,
-            ));
-        }
-
-        // Fallback dev/test : secret éphémère par processus. Les jetons émis sous
-        // ce secret ne survivront PAS au redémarrage d'un worker — ce qui est
-        // acceptable hors production.
-        return random_bytes(CsrfConstant::MIN_SECRET_BYTES);
-    }
-
-    /**
      * Câble le côté entrant du Pont d'Authentification Universel (RFC-021).
      *
-     * - Secret partagé fail-closed : résolu par resolveAuthSecret() avant l'appel
+     * - Secret partagé fail-closed : résolu par SecretFactory::auth() avant l'appel
      *   (absent ou < 32 octets ⇒ avortement du boot en production).
      * - `SecurityContext` : porteur d'identité à portée requête — SEUL service
      *   mutable du pont. ResettableInterface ⇒ vidé à chaque boucle worker par
@@ -836,43 +796,6 @@ final class AppKernelFactory
                 tenant: $config->getString('waffle.auth.tenant'),
             ),
         ]);
-    }
-
-    /**
-     * Résout le secret partagé du Pont d'Authentification Universel (RFC-021
-     * §4.2) avec la même discipline que le secret CSRF : la config gagne
-     * (`waffle.auth.secret`, interpolée depuis WAFFLE_AUTH_SECRET) ; sinon
-     * lecture directe de l'environnement. En production, absent ou plus court
-     * que 32 octets ⇒ refus de démarrer (fail-closed — jamais de contournement
-     * non authentifié). Hors prod, un secret éphémère permet de démarrer, mais
-     * les assertions émises ne seront vérifiables que par CE processus.
-     */
-    private static function resolveAuthSecret(Config $config, string $env): string
-    {
-        $fromConfig = $config->getString('waffle.auth.secret');
-        $candidate = is_string($fromConfig) && $fromConfig !== '' ? $fromConfig : null;
-
-        if ($candidate === null) {
-            $fromEnv = getenv(AuthConstant::SECRET_ENV_KEY);
-            if (is_string($fromEnv) && $fromEnv !== '') {
-                $candidate = $fromEnv;
-            }
-        }
-
-        if ($candidate !== null && strlen($candidate) >= AuthConstant::MIN_SECRET_BYTES) {
-            return $candidate;
-        }
-
-        if ($env === Constant::ENV_PROD) {
-            throw new RuntimeException(sprintf(
-                'Secret du pont d\'authentification manquant ou plus court que %d octets en production. '
-                . 'Renseignez "waffle.auth.secret" ou la variable d\'environnement %s.',
-                AuthConstant::MIN_SECRET_BYTES,
-                AuthConstant::SECRET_ENV_KEY,
-            ));
-        }
-
-        return random_bytes(AuthConstant::MIN_SECRET_BYTES);
     }
 
     /**

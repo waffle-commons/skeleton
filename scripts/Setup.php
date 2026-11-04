@@ -16,11 +16,12 @@ final class Setup
 {
     /**
      * Secrets remplacés à la création du `.env` : la valeur de `.env.example` est
-     * publique. WAFFLE_CSRF_SECRET et WAFFLE_AUTH_SECRET exigent 32 octets ou plus ;
-     * en deçà, la production refuse de démarrer et le développement tire un secret
-     * différent dans chaque worker, si bien qu'un jeton émis par l'un échoue sur l'autre.
+     * publique. APP_SECRET et WAFFLE_AUTH_SECRET exigent 32 octets ou plus ; en deçà,
+     * la production refuse de démarrer et le développement tire un secret différent
+     * dans chaque worker, si bien qu'un jeton émis par l'un échoue sur l'autre. La
+     * clé CSRF dérive d'APP_SECRET : WAFFLE_CSRF_SECRET reste vide.
      */
-    private const array SECRET_KEYS = ['APP_SECRET', 'WAFFLE_CSRF_SECRET', 'WAFFLE_AUTH_SECRET'];
+    private const array SECRET_KEYS = ['APP_SECRET', 'WAFFLE_AUTH_SECRET'];
 
     private const string SECRET_PLACEHOLDER = 'ChangeMeInProduction';
 

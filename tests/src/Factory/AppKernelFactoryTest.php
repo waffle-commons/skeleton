@@ -19,9 +19,9 @@ use Waffle\Commons\HttpClient\Resilience\RetryingClient;
  * FIX-01 #9 (audit Beta6) : régression du garde-fou fail-closed
  * `APP_ENV=prod` + `APP_DEBUG=true`, ajouté dans AppKernelFactory::create().
  *
- * `tests/config/app.yaml` (cf. tests/bootstrap.php) laisse les secrets CSRF/Auth
- * vides — hors production, resolveCsrfSecret()/resolveAuthSecret() retombent
- * sur un secret éphémère. En production, ils redeviennent stricts : on fournit
+ * `tests/config/app.yaml` (cf. tests/bootstrap.php) laisse APP_SECRET et les
+ * secrets CSRF/Auth vides — hors production, SecretFactory::csrf()/auth()
+ * retombent sur un secret éphémère. En production, ils redeviennent stricts : on fournit
  * donc explicitement des secrets valides (>= 32 octets) via putenv() pour isoler
  * le comportement testé ici (le garde-fou debug/prod) de ces vérifications
  * voisines, et on les restaure dans tearDown() pour ne pas polluer les autres
@@ -32,6 +32,7 @@ final class AppKernelFactoryTest extends AbstractTestCase
     #[\Override]
     protected function tearDown(): void
     {
+        putenv('APP_SECRET');
         putenv('WAFFLE_CSRF_SECRET');
         putenv('WAFFLE_AUTH_SECRET');
 
@@ -40,7 +41,7 @@ final class AppKernelFactoryTest extends AbstractTestCase
 
     /**
      * Génère un secret éphémère (>= 32 octets) pour isoler ce test des
-     * vérifications resolveCsrfSecret()/resolveAuthSecret() — jamais un
+     * vérifications SecretFactory::csrf()/auth() — jamais un
      * littéral en dur (mago `no-literal-password`), jamais réutilisé hors de
      * ce process de test.
      */
@@ -79,9 +80,9 @@ final class AppKernelFactoryTest extends AbstractTestCase
 
     /**
      * Régression voisine (même famille fail-closed que #9) : `tests/config/app.yaml`
-     * laisse `waffle.security.csrf.secret` vide et aucun WAFFLE_CSRF_SECRET n'est
-     * exporté dans ce conteneur — resolveCsrfSecret() doit donc refuser de démarrer
-     * en production plutôt que de retomber silencieusement sur un secret éphémère.
+     * laisse `waffle.secret` et `waffle.security.csrf.secret` vides, et ni APP_SECRET
+     * ni WAFFLE_CSRF_SECRET n'est exporté — SecretFactory::csrf() doit donc refuser
+     * de démarrer en production plutôt que de retomber sur un secret éphémère.
      */
     #[Test]
     public function create_throws_when_prod_csrf_secret_is_missing(): void
@@ -93,7 +94,7 @@ final class AppKernelFactoryTest extends AbstractTestCase
     }
 
     /**
-     * Même discipline pour resolveAuthSecret() (RFC-021) : un CSRF secret valide
+     * Même discipline pour SecretFactory::auth() (RFC-021) : un CSRF secret valide
      * seul ne suffit pas à démarrer en production si le secret du pont
      * d'authentification est manquant.
      */
@@ -106,6 +107,21 @@ final class AppKernelFactoryTest extends AbstractTestCase
         $this->expectExceptionMessageMatches('/authentification/');
 
         AppKernelFactory::create(env: Constant::ENV_PROD, debug: false);
+    }
+
+    /**
+     * APP_SECRET, secret racine : avec le secret du pont, il suffit à démarrer en
+     * production ; la clé CSRF en dérive, WAFFLE_CSRF_SECRET n'est plus exigé.
+     */
+    #[Test]
+    public function create_boots_in_prod_with_app_secret_and_the_auth_secret_only(): void
+    {
+        putenv('APP_SECRET=' . self::ephemeralSecret());
+        putenv('WAFFLE_AUTH_SECRET=' . self::ephemeralSecret());
+
+        $kernel = AppKernelFactory::create(env: Constant::ENV_PROD, debug: false);
+
+        self::assertInstanceOf(KernelInterface::class, $kernel);
     }
 
     /**
