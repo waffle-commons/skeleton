@@ -62,10 +62,12 @@
         "formatter": "vendor/bin/mago fmt",
         "linter": "vendor/bin/mago lint",
         "analyzer": "vendor/bin/mago analyze",
+        "guard": "vendor/bin/mago guard",
         "mago": [
             "@formatter",
             "@linter",
-            "@analyzer"
+            "@analyzer",
+            "@guard"
         ],
         "phpunit": "vendor/bin/phpunit",
         "tests": [

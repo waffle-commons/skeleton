@@ -11,7 +11,10 @@ use Waffle\Commons\Runtime\WaffleRuntime;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-define('APP_ROOT', realpath(path: dirname(path: __DIR__)));
+// __DIR__ est déjà résolu (liens symboliques compris) : son parent est la racine réelle.
+// APP_ROOT reste défini pour AppKernelFactory et le kernel, qui le lisent.
+$root = dirname(path: __DIR__);
+define('APP_ROOT', $root);
 const APP_CONFIG = 'config';
 
 // FIX-01 #9 (Beta6 audit) : le retour de load() était auparavant ignoré. DotEnv
@@ -20,7 +23,7 @@ const APP_CONFIG = 'config';
 // ci-dessous retombent silencieusement sur leurs valeurs par défaut, quel que
 // soit le contenu réel de .env ou de l'environnement Docker/Kubernetes. Même
 // précédence que AppKernelFactory::create() : le process l'emporte sur .env.
-$envRegistry = array_merge(new DotEnv(path: APP_ROOT)->load(), getenv());
+$envRegistry = array_merge(new DotEnv(path: $root)->load(), getenv());
 $env = $envRegistry[Constant::APP_ENV] ?? Constant::ENV_PROD;
 $debug = filter_var($envRegistry[Constant::APP_DEBUG] ?? false, FILTER_VALIDATE_BOOL);
 
@@ -38,7 +41,7 @@ $maxRequests = (int) ($envRegistry['MAX_REQUESTS'] ?? 500);
 // SEC-03 (Beta6 audit) : racine de dépôt des uploads — permet à UploadedFile::
 // moveTo() de vérifier le confinement via Assert::within() plutôt que de se fier
 // uniquement à Assert::safePath() (qui ne rejette que les segments littéraux `..`).
-new WaffleRuntime(new GlobalsFactory(uploadBaseDir: APP_ROOT . '/var/uploads'), new ResponseEmitter())->loop(
+new WaffleRuntime(new GlobalsFactory(uploadBaseDir: $root . '/var/uploads'), new ResponseEmitter())->loop(
     kernel: $kernel,
     maxRequests: $maxRequests,
 );

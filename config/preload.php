@@ -40,8 +40,12 @@ $loader = require $autoload;
         }
 
         try {
-            // Déclenche l’autoloader, qui charge d’abord parents et interfaces.
-            class_exists($class);
+            // Déclenche l’autoloader, qui charge d’abord parents et interfaces. Une
+            // interface ou un trait est chargé, mais class_exists() rend false : seul
+            // un symbole que son fichier ne déclare pas est signalé.
+            if (!class_exists($class) && !interface_exists($class, false) && !trait_exists($class, false)) {
+                error_log(sprintf('Préchargement ignoré pour %s : %s ne le déclare pas', $class, $file));
+            }
         } catch (Throwable $t) {
             // Dépendance optionnelle absente (p. ex. un pont vers un SDK non installé) : on passe.
             error_log(sprintf('Préchargement ignoré pour %s : %s', $class, $t->getMessage()));

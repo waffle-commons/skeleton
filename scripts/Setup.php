@@ -7,9 +7,10 @@ namespace Scripts;
 /**
  * Script de mise en place du skeleton Waffle.
  *
- * Gère les tâches post-create-project et post-install. Sans dépendance externe
- * (PHP pur) : l'événement Composer est reçu en `object` (typage duck), pour ne
- * pas exiger composer/composer.
+ * Gère les tâches post-create-project et post-install. PHP pur, sans dépendance :
+ * Composer passe son événement en argument, mais le script n'en lit rien et écrit
+ * directement sur la sortie standard (les erreurs sur la sortie d'erreur). Typer
+ * l'IO de Composer exigerait composer/composer dans chaque projet créé.
  */
 final class Setup
 {
@@ -31,45 +32,39 @@ final class Setup
 
     /**
      * Déclenché après "composer create-project".
-     *
-     * @param object $event Composer\Script\Event (typage duck pour éviter la dépendance)
      */
-    public static function postCreateProject(object $event): void
+    public static function postCreateProject(): void
     {
-        $io = $event->getIO();
         $rootDir = dirname(__DIR__);
 
-        $io->write('<info>🦁 Configuration du skeleton Waffle Commons...</info>');
+        self::info('🦁 Configuration du skeleton Waffle Commons...');
 
-        self::createEnvFile($rootDir, $io);
-        self::generateSecrets($rootDir, $io);
-        self::createVarDirectories($rootDir, $io);
-        self::trackComposerLock($rootDir, $io);
+        self::createEnvFile($rootDir);
+        self::generateSecrets($rootDir);
+        self::createVarDirectories($rootDir);
+        self::trackComposerLock($rootDir);
 
-        $io->write('<info>✅ L\'écosystème Waffle est prêt !</info>');
+        self::info('✅ L\'écosystème Waffle est prêt !');
     }
 
     /**
      * Déclenché après "composer install" et "composer update".
-     *
-     * @param object $event Composer\Script\Event
      */
-    public static function postInstall(object $event): void
+    public static function postInstall(): void
     {
-        $io = $event->getIO();
         $rootDir = dirname(__DIR__);
 
-        self::createVarDirectories($rootDir, $io);
+        self::createVarDirectories($rootDir);
 
         // S'assurer que .env existe (sans écraser un fichier existant) : un clone neuf
         // reçoit ses propres secrets, comme un projet créé.
         if (!file_exists($rootDir . '/.env')) {
-            self::createEnvFile($rootDir, $io);
-            self::generateSecrets($rootDir, $io);
+            self::createEnvFile($rootDir);
+            self::generateSecrets($rootDir);
         }
     }
 
-    private static function createEnvFile(string $rootDir, object $io): void
+    private static function createEnvFile(string $rootDir): void
     {
         $envFile = $rootDir . '/.env';
         $envExample = $rootDir . '/.env.example';
@@ -79,16 +74,16 @@ final class Setup
         }
 
         if (!file_exists($envExample)) {
-            $io->writeError('<error>Fichier .env.example introuvable !</error>');
+            self::error('Fichier .env.example introuvable !');
             return;
         }
 
         if (!copy($envExample, $envFile)) {
-            $io->writeError('<error>Impossible de créer .env depuis .env.example.</error>');
+            self::error('Impossible de créer .env depuis .env.example.');
             return;
         }
 
-        $io->write(' -> <comment>.env</comment> créé depuis le modèle.');
+        self::info(' -> .env créé depuis le modèle.');
     }
 
     /**
@@ -96,7 +91,7 @@ final class Setup
      * (64 caractères hexadécimaux). Seule la ligne entière `CLÉ=ChangeMeInProduction`
      * est visée : un secret déjà personnalisé est conservé.
      */
-    private static function generateSecrets(string $rootDir, object $io): void
+    private static function generateSecrets(string $rootDir): void
     {
         $envFile = $rootDir . '/.env';
         $content = is_file($envFile) ? file_get_contents($envFile) : false;
@@ -121,14 +116,14 @@ final class Setup
         }
 
         if (file_put_contents($envFile, $content) === false) {
-            $io->writeError('<error>Impossible d\'écrire les secrets dans .env.</error>');
+            self::error('Impossible d\'écrire les secrets dans .env.');
             return;
         }
 
-        $io->write(' -> Secrets générés : <comment>' . implode('</comment>, <comment>', $generated) . '</comment>.');
+        self::info(' -> Secrets générés : ' . implode(', ', $generated) . '.');
     }
 
-    private static function createVarDirectories(string $rootDir, object $io): void
+    private static function createVarDirectories(string $rootDir): void
     {
         $dirs = [
             'var/cache/prod',
@@ -143,7 +138,7 @@ final class Setup
             }
 
             if (!mkdir($path, 0o777, true) && !is_dir($path)) {
-                $io->writeError('<error>Impossible de créer ' . $dir . '.</error>');
+                self::error('Impossible de créer ' . $dir . '.');
                 continue;
             }
 
@@ -151,14 +146,14 @@ final class Setup
             chmod($path, 0o777);
         }
 
-        $io->write(' -> Dossiers <comment>var/</comment> garantis présents.');
+        self::info(' -> Dossiers var/ garantis présents.');
     }
 
     /**
      * Le dépôt du squelette ignore son composer.lock ; un projet créé doit versionner
      * le sien pour des installations reproductibles. Retire le bloc balisé du .gitignore.
      */
-    private static function trackComposerLock(string $rootDir, object $io): void
+    private static function trackComposerLock(string $rootDir): void
     {
         $gitignore = $rootDir . '/.gitignore';
         $content = is_file($gitignore) ? file_get_contents($gitignore) : false;
@@ -174,10 +169,20 @@ final class Setup
         }
 
         if (file_put_contents($gitignore, $updated) === false) {
-            $io->writeError('<error>Impossible de mettre à jour .gitignore.</error>');
+            self::error('Impossible de mettre à jour .gitignore.');
             return;
         }
 
-        $io->write(' -> <comment>composer.lock</comment> versionné (retiré du .gitignore).');
+        self::info(' -> composer.lock versionné (retiré du .gitignore).');
+    }
+
+    private static function info(string $message): void
+    {
+        fwrite(STDOUT, $message . PHP_EOL);
+    }
+
+    private static function error(string $message): void
+    {
+        fwrite(STDERR, 'Erreur : ' . $message . PHP_EOL);
     }
 }
