@@ -55,6 +55,10 @@ services:
       APP_DEBUG: false
       # En production réelle, les secrets doivent être injectés via la CI/CD ou Docker Secrets.
       APP_SECRET: ${APP_SECRET:-ChangeMeInProduction}
+      # Secrets exigés en production (32 octets ou plus, `openssl rand -hex 32`) : sans eux,
+      # `docker compose` refuse de démarrer ici, plutôt que le noyau à son premier boot.
+      WAFFLE_CSRF_SECRET: ${WAFFLE_CSRF_SECRET:?définissez WAFFLE_CSRF_SECRET (32 octets ou plus)}
+      WAFFLE_AUTH_SECRET: ${WAFFLE_AUTH_SECRET:?définissez WAFFLE_AUTH_SECRET (32 octets ou plus)}
       # Arrêt gracieux sans hook preStop (OPS-02) : à SIGTERM, /readyz répond 503 pendant
       # ce délai, puis Caddy ferme ses ports et draine l'en-cours (cf. docker/frankenphp/Caddyfile).
       CADDY_SHUTDOWN_DELAY: ${CADDY_SHUTDOWN_DELAY:-5s}
