@@ -8,6 +8,7 @@ use App\Security\RouteParamSubjectResolver;
 use AppTests\AbstractTestCase;
 use PHPUnit\Framework\Attributes\Test;
 use Psr\Http\Message\ServerRequestInterface;
+use Waffle\Commons\Contracts\Constant\Constant;
 use Waffle\Commons\Http\Factory\ServerRequestFactory;
 
 /**
@@ -28,7 +29,7 @@ final class RouteParamSubjectResolverTest extends AbstractTestCase
     #[Test]
     public function route_params_become_the_subject(): void
     {
-        $request = $this->request('/hello/Ada')->withAttribute('_params', ['name' => 'Ada']);
+        $request = $this->request('/hello/Ada')->withAttribute(Constant::ATTR_PARAMS, ['name' => 'Ada']);
 
         $resolver = new RouteParamSubjectResolver();
 
@@ -48,7 +49,7 @@ final class RouteParamSubjectResolverTest extends AbstractTestCase
     {
         // Route appariée sans placeholder : `_params` vaut [] — le résolveur
         // retourne null (aucune ressource portée) ; comportement verrouillé.
-        $request = $this->request('/')->withAttribute('_params', []);
+        $request = $this->request('/')->withAttribute(Constant::ATTR_PARAMS, []);
 
         $resolver = new RouteParamSubjectResolver();
 
@@ -59,7 +60,7 @@ final class RouteParamSubjectResolverTest extends AbstractTestCase
     public function non_array_attribute_resolves_to_null(): void
     {
         // Attribut corrompu (non-tableau) : même repli fail-safe vers null.
-        $request = $this->request('/')->withAttribute('_params', 'pas-un-tableau');
+        $request = $this->request('/')->withAttribute(Constant::ATTR_PARAMS, 'pas-un-tableau');
 
         $resolver = new RouteParamSubjectResolver();
 

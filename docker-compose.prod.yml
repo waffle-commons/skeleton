@@ -22,27 +22,31 @@ services:
     # XDG_CONFIG_HOME=/config et XDG_DATA_HOME=/data — cf. le Dockerfile —,
     # ainsi que var/cache et var/log si un adaptateur fichier est un jour
     # configuré) : les seules entrées ci-dessous sont donc des tmpfs éphémères
-    # (jamais persistés au redémarrage), `mode: 1777` posé explicitement — le
+    # (jamais persistés au redémarrage), en mode 1777 posé explicitement — le
     # mode par défaut d'un tmpfs Docker n'est PAS garanti world-writable
     # (vérifié : sans ce réglage, Caddy échoue avec « permission denied » sous
-    # l'utilisateur non-root dédié).
+    # l'utilisateur non-root dédié). Ce mode s'écrit en octal, `0o1777` :
+    # Compose lit un `1777` nu comme un nombre décimal, soit 0o3361, et
+    # l'utilisateur non-root ne peut alors rien écrire dans ces dossiers — les
+    # workers échouent au démarrage, faute de pouvoir créer la racine des
+    # uploads (var/uploads).
     volumes:
       - type: tmpfs
         target: /tmp
         tmpfs:
-          mode: 1777
+          mode: 0o1777
       - type: tmpfs
         target: /config
         tmpfs:
-          mode: 1777
+          mode: 0o1777
       - type: tmpfs
         target: /data
         tmpfs:
-          mode: 1777
+          mode: 0o1777
       - type: tmpfs
         target: /app/var
         tmpfs:
-          mode: 1777
+          mode: 0o1777
     # Variables d'environnement de production.
     environment:
       # Utiliser le vrai nom de domaine (transmis via variable d'environnement, sinon localhost).
@@ -50,7 +54,20 @@ services:
       APP_ENV: prod
       APP_DEBUG: false
       # En production réelle, les secrets doivent être injectés via la CI/CD ou Docker Secrets.
-      APP_SECRET: ${APP_SECRET:-ChangeMeInProduction}
+      # Secrets exigés (32 octets ou plus, `openssl rand -hex 32`) : sans eux, `docker compose`
+      # refuse de démarrer ici, plutôt que le noyau à son premier boot. APP_SECRET est le
+      # secret racine, dont dérive la clé CSRF ; WAFFLE_AUTH_SECRET est partagé avec les
+      # autres services du pont d'authentification.
+      APP_SECRET: ${APP_SECRET:?définissez APP_SECRET (32 octets ou plus)}
+      WAFFLE_AUTH_SECRET: ${WAFFLE_AUTH_SECRET:?définissez WAFFLE_AUTH_SECRET (32 octets ou plus)}
+      # Facultatif : impose la clé CSRF au lieu de la dériver d'APP_SECRET.
+      WAFFLE_CSRF_SECRET: ${WAFFLE_CSRF_SECRET:-}
+      # Arrêt gracieux sans hook preStop (OPS-02) : à SIGTERM, /readyz répond 503 pendant
+      # ce délai, puis Caddy ferme ses ports et draine l'en-cours (cf. docker/frankenphp/Caddyfile).
+      CADDY_SHUTDOWN_DELAY: ${CADDY_SHUTDOWN_DELAY:-5s}
+    # Docker tue le conteneur 10 s après SIGTERM par défaut : laisser shutdown_delay (5 s)
+    # puis grace_period (25 s) s'écouler avant le SIGKILL.
+    stop_grace_period: 35s
     # Exposition des ports.
     ports:
       - "80:80"

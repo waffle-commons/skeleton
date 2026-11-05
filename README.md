@@ -11,7 +11,7 @@ The official starting point for building robust, secure, and high-performance ap
 <a href="./LICENSE.md"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
 </p>
 
-> **Release:** `0.1.0-beta6` &nbsp;|&nbsp; PHP 8.5+ · FrankenPHP worker mode
+> **Release:** `0.1.0-beta7` &nbsp;|&nbsp; PHP 8.5+ · FrankenPHP worker mode
 
 Welcome to the **Waffle Skeleton**, the official starting point for building robust, secure, and high-performance applications with the [Waffle Ecosystem](https://github.com/waffle-commons).
 
@@ -33,17 +33,30 @@ This skeleton is not just a folder structure; it is a **Production-Grade Boilerp
 
 *   **Docker** & **Docker Compose** (Required)
 
-*   **PHP 8.5+** & **Composer** (Optional, for local commands)
+*   **PHP 8.5+** with the `redis` and `yaml` extensions, & **Composer** (Optional: only to run Composer on your machine rather than in Docker)
 
 
 ### Create a New Project
 
-Use Composer to create your project. This will automatically trigger the setup scripts to generate secure keys and initialize the directory structure. 
+Until `1.0.0`, every Waffle release is a beta, and Composer offers only stable releases unless you name a version. Name the one you want:
 ```shell
-composer create-project waffle-commons/skeleton my-app
+composer create-project waffle-commons/skeleton:0.1.0-beta7 my-app
 cd my-app
 ```
-> **Note:** If you don't have PHP installed locally, you can use the Docker setup immediately after cloning the repository manually.
+The setup scripts run on the way: `.env` is created from `.env.example` with its secrets generated, and `var/` is initialised.
+
+**With Docker only** (no PHP or Composer on your machine): download the script at the release you want, read it, then run it. It runs the same `composer create-project` in the official Composer image, pinned by digest, as your own user.
+```shell
+curl -fsSLO https://raw.githubusercontent.com/waffle-commons/skeleton/0.1.0-beta7/create-project.sh
+less create-project.sh
+bash create-project.sh my-app
+```
+Without the script, the same thing in one command (the Composer image lacks the `redis` and `yaml` extensions; your application's image installs them):
+```shell
+docker run --rm -it --user "$(id -u):$(id -g)" -e COMPOSER_HOME=/tmp/composer -v "$PWD":/app -w /app \
+  composer:2.10.3 create-project waffle-commons/skeleton:0.1.0-beta7 my-app \
+  --ignore-platform-req=ext-redis --ignore-platform-req=ext-yaml
+```
 
 🐳 Docker Environment
 ---------------------
@@ -84,6 +97,8 @@ Optimized for Performance and Security.
 docker compose -f docker-compose.prod.yml up --build -d
 ```
 
+Production needs `APP_SECRET` and `WAFFLE_AUTH_SECRET` (32 bytes or more): without them, `docker compose` stops and names the missing variable, and the kernel would refuse to boot anyway. The CSRF signing key derives from `APP_SECRET`; set `WAFFLE_CSRF_SECRET` only to impose a key of your own. Locally, Compose reads them from your `.env`; in a real deployment, inject them from your CI/CD or secret store, never from a committed file.
+
 📂 Directory Structure
 ----------------------
 
@@ -112,15 +127,15 @@ A Waffle application follows a strict but simple structure:
 
 ### Environment Variables (`.env`)
 
-Waffle ships a native `DotEnv` parser (no third-party dependency). When you run `create-project`, a `.env` file is automatically created from `.env.example` with a generated `APP_SECRET`.
+Waffle ships a native `DotEnv` parser (no third-party dependency). When you run `create-project`, a `.env` file is automatically created from `.env.example` with generated secrets: `APP_SECRET` and `WAFFLE_AUTH_SECRET` (32 random bytes each, in hex). `WAFFLE_CSRF_SECRET` stays empty, since the CSRF key derives from `APP_SECRET`. `composer install` does the same when `.env` is missing, so a fresh clone of your project gets its own.
 
 | Variable             | Description                                                                                                                                                                                            |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `APP_ENV`            | `dev` (debug enabled) or `prod` (optimized).                                                                                                                                                           |
 | `APP_DEBUG`          | `true` displays detailed stack traces. `false` renders JSON errors.                                                                                                                                    |
-| `APP_SECRET`         | 32-byte Hex string used for cryptographic operations.                                                                                                                                                  |
-| `WAFFLE_CSRF_SECRET` | 32+ byte signing secret for stateless HMAC CSRF tokens (Beta-1 / SEC-01). Bound at boot by `AppKernelFactory::resolveCsrfSecret()`. In `prod`, a missing or short value aborts boot; non-prod falls back to a per-process random secret. |
-| `WAFFLE_AUTH_SECRET` | 32+ byte shared HMAC-SHA256 secret for the Universal Authentication Bridge (RFC-021). Signs `X-Wfl-Assert-User` identity assertions and validates the demo HS256 JWTs. In `prod`, a missing or short value aborts boot (fail-closed). |
+| `APP_SECRET`         | Root secret of the application, 32 bytes or more, generated by `create-project`. The CSRF signing key derives from it (HKDF-SHA256, `App\Factory\SecretFactory::csrf()`) unless `WAFFLE_CSRF_SECRET` is set, so every worker and replica that shares it signs with the same key. Required in `prod`. |
+| `WAFFLE_CSRF_SECRET` | Optional 32+ byte signing key for stateless HMAC CSRF tokens (Beta-1 / SEC-01), used instead of the key derived from `APP_SECRET`. In `prod`, a value shorter than 32 bytes aborts boot, as does the absence of both; non-prod falls back to the derived key, then to a per-process random one. |
+| `WAFFLE_AUTH_SECRET` | 32+ byte shared HMAC-SHA256 secret for the Universal Authentication Bridge (RFC-021). Signs `X-Wfl-Assert-User` identity assertions and validates the demo HS256 JWTs. In `prod`, a missing or short value aborts boot (fail-closed). Never derived from `APP_SECRET`: the services of the bridge share it. |
 | `SERVER_NAME`        | The domain name used by Caddy (e.g., `example.com` or `localhost`).                                                                                                                                    |
 | `DB_HOST` / `DB_PORT` | Database host and port consumed by `waffle.database.*` (RFC-022).                                                                                                                                     |
 | `DB_NAME`            | Database / schema name.                                                                                                                                                                                |
@@ -136,14 +151,15 @@ Waffle uses native YAML parsing (via PECL extension) for blazing-fast configurat
 # Main application configuration for the Waffle Framework
 waffle:
   env: '%env(APP_ENV)%'
-  debug: '%env(APP_DEBUG)%'
+  # Root secret (32+ bytes). The CSRF key derives from it when security.csrf.secret is empty.
+  secret: '%env(APP_SECRET)%'
   # Host-header allowlist (anti-poisoning). REQUIRED in production.
   trusted_hosts:
     - localhost
   security:
     level: 10
     csrf:
-      # SEC-01: stateless HMAC CSRF secret. Prod refuses to boot without a 32+ byte value.
+      # SEC-01: stateless HMAC CSRF key, optional. Prod refuses a value under 32 bytes.
       secret: '%env(WAFFLE_CSRF_SECRET)%'
     # SEC-04: fail-closed CORS. Empty ⇒ every cross-origin request is rejected.
     # Add exact origins (scheme://host[:port]); never '*' with credentials.
@@ -200,15 +216,29 @@ See the framework docs at [`waffle-commons/documentation`](https://github.com/wa
 🗃️ Database & Migrations
 -------------------------
 
-Waffle ships a lightweight, forward-only SQL migration runner (RFC-022, via `waffle-commons/data`). Database access is configured under `waffle.database` in `config/app.yaml` (credentials from the `DB_*` env vars), and the connection pool + runner are wired in `src/Factory/AppKernelFactory.php` and registered as `db:migrate` in `bin/waffle`.
+Waffle ships a lightweight SQL migration runner (RFC-022, via `waffle-commons/data`). Database access is configured under `waffle.database` in `config/app.yaml` (credentials from the `DB_*` env vars), and the connection pool + runner are wired in `src/Factory/AppKernelFactory.php` and registered in `bin/waffle` as `db:migrate`, `db:status` and `db:rollback`, next to the `make:migration` scaffolder.
 
-Write versioned SQL scripts in `migrations/`, named `Version<YYYYMMDDNN>_<Description>.sql`, then apply the pending ones from the project root:
+From the project root, create a version, write its SQL, then apply the pending ones:
 
 ```shell
-php bin/waffle db:migrate
+php bin/waffle make:migration CreateOrdersTable   # migrations/Version<YYYYMMDDNN>_CreateOrdersTable.sql + .down.sql
+php bin/waffle db:migrate                         # applies every pending version
+php bin/waffle db:status                          # applied, pending or missing, version by version
+php bin/waffle db:rollback --steps=1              # reverts the most recent version through its .down.sql
 ```
 
-Each migration runs in its own transaction and is recorded in a `waffle_migrations` table, so re-runs skip already-applied scripts. The skeleton ships a sample `migrations/Version2026053101_CreateUsersTable.sql` to get you started. See the [Database Migrations how-to](https://github.com/waffle-commons/documentation/blob/main/how-to/database-migrations.md) for the full workflow and the MySQL transactional-DDL caveat.
+Each migration runs in its own transaction and is recorded in a `waffle_migrations` table, so re-runs skip already-applied scripts; a script that holds only comments is refused, never recorded. The skeleton ships a sample `migrations/Version2026053101_CreateUsersTable.sql` and its down script to get you started. See the [Database Migrations how-to](https://github.com/waffle-commons/documentation/blob/main/how-to/database-migrations.md) for the full workflow and the transactional-DDL caveat on MySQL, MariaDB and Oracle.
+
+📖 API Documentation (OpenAPI)
+------------------------------
+
+`waffle-commons/openapi` (a development dependency) describes your routes and their `#[Dto]` bodies as an OpenAPI 3.1 document, with no hand-written YAML:
+
+```shell
+php bin/waffle openapi:generate --output=public/openapi.json   # or --output=- for the standard output
+```
+
+In debug mode only, the application also serves `/_docs` (Swagger UI) and `/_docs/openapi.json` (the document generated from the routes at that moment); `ApiDocsFactory` mounts them, and production, which refuses debug mode, never does. The `#[OA\Operation]`, `#[OA\Response]` and `#[OA\Property]` attributes from `Waffle\Commons\Contracts\OpenApi\Attribute` add summaries, tags, extra responses and field descriptions; see the [openapi README](https://github.com/waffle-commons/openapi#readme).
 
 👩‍💻 Usage Example
 -------------------

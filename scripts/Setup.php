@@ -1,51 +1,71 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Scripts;
 
 /**
  * Script de mise en place du skeleton Waffle.
  *
- * Gère les tâches post-create-project et post-install. Sans dépendance externe
- * (PHP pur).
+ * Gère les tâches post-create-project et post-install. PHP pur, sans dépendance :
+ * Composer passe son événement en argument, mais le script n'en lit rien et écrit
+ * directement sur la sortie standard (les erreurs sur la sortie d'erreur). Typer
+ * l'IO de Composer exigerait composer/composer dans chaque projet créé.
  */
-class Setup
+final class Setup
 {
     /**
-     * Déclenché après "composer create-project".
-     * * @param object $event Composer\Script\Event (typage duck pour éviter la dépendance)
+     * Secrets remplacés à la création du `.env` : la valeur de `.env.example` est
+     * publique. APP_SECRET et WAFFLE_AUTH_SECRET exigent 32 octets ou plus ; en deçà,
+     * la production refuse de démarrer et le développement tire un secret différent
+     * dans chaque worker, si bien qu'un jeton émis par l'un échoue sur l'autre. La
+     * clé CSRF dérive d'APP_SECRET : WAFFLE_CSRF_SECRET reste vide.
      */
-    public static function postCreateProject(object $event): void
+    private const array SECRET_KEYS = ['APP_SECRET', 'WAFFLE_AUTH_SECRET'];
+
+    private const string SECRET_PLACEHOLDER = 'ChangeMeInProduction';
+
+    /**
+     * Bloc du .gitignore propre au dépôt du squelette (il ne versionne pas son
+     * composer.lock) : un projet créé versionne le sien, le bloc est donc retiré.
+     */
+    private const string SKELETON_ONLY_BLOCK = '/^###> waffle-commons\/skeleton ###$.*?^###< waffle-commons\/skeleton ###$\R?/ms';
+
+    /**
+     * Déclenché après "composer create-project".
+     */
+    public static function postCreateProject(): void
     {
-        $io = $event->getIO();
         $rootDir = dirname(__DIR__);
 
-        $io->write('<info>🦁 Configuration du skeleton Waffle Commons...</info>');
+        self::info('🦁 Configuration du skeleton Waffle Commons...');
 
-        self::createEnvFile($rootDir, $io);
-        self::generateAppSecret($rootDir, $io);
-        self::createVarDirectories($rootDir, $io);
+        self::createEnvFile($rootDir);
+        self::generateSecrets($rootDir);
+        self::createVarDirectories($rootDir);
+        self::trackComposerLock($rootDir);
 
-        $io->write('<info>✅ L\'écosystème Waffle est prêt !</info>');
+        self::info('✅ L\'écosystème Waffle est prêt !');
     }
 
     /**
-     * Déclenché après "composer install".
-     * * @param object $event Composer\Script\Event
+     * Déclenché après "composer install" et "composer update".
      */
-    public static function postInstall(object $event): void
+    public static function postInstall(): void
     {
-        $io = $event->getIO();
         $rootDir = dirname(__DIR__);
 
-        self::createVarDirectories($rootDir, $io);
+        self::createVarDirectories($rootDir);
 
-        // S'assurer que .env existe (sans écraser un fichier existant).
+        // S'assurer que .env existe (sans écraser un fichier existant) : un clone neuf
+        // reçoit ses propres secrets, comme un projet créé.
         if (!file_exists($rootDir . '/.env')) {
-            self::createEnvFile($rootDir, $io);
+            self::createEnvFile($rootDir);
+            self::generateSecrets($rootDir);
         }
     }
 
-    private static function createEnvFile(string $rootDir, object $io): void
+    private static function createEnvFile(string $rootDir): void
     {
         $envFile = $rootDir . '/.env';
         $envExample = $rootDir . '/.env.example';
@@ -55,43 +75,56 @@ class Setup
         }
 
         if (!file_exists($envExample)) {
-            $io->writeError('<error>Fichier .env.example introuvable !</error>');
+            self::error('Fichier .env.example introuvable !');
             return;
         }
 
-        copy($envExample, $envFile);
-        $io->write(' -> <comment>.env</comment> créé depuis le modèle.');
+        if (!copy($envExample, $envFile)) {
+            self::error('Impossible de créer .env depuis .env.example.');
+            return;
+        }
+
+        self::info(' -> .env créé depuis le modèle.');
     }
 
-    private static function generateAppSecret(string $rootDir, object $io): void
+    /**
+     * Remplace chaque secret resté à sa valeur publique par 32 octets aléatoires
+     * (64 caractères hexadécimaux). Seule la ligne entière `CLÉ=ChangeMeInProduction`
+     * est visée : un secret déjà personnalisé est conservé.
+     */
+    private static function generateSecrets(string $rootDir): void
     {
         $envFile = $rootDir . '/.env';
+        $content = is_file($envFile) ? file_get_contents($envFile) : false;
 
-        if (!file_exists($envFile)) {
+        if ($content === false) {
             return;
         }
 
-        $content = file_get_contents($envFile);
+        $generated = [];
+        foreach (self::SECRET_KEYS as $key) {
+            $pattern = '/^' . preg_quote($key . '=' . self::SECRET_PLACEHOLDER, '/') . '$/m';
+            $updated = preg_replace($pattern, $key . '=' . bin2hex(random_bytes(32)), $content, 1);
 
-        // Vérification : le secret a-t-il déjà été modifié ou n'est-il pas présent ?
-        if (!str_contains($content, 'APP_SECRET=ChangeMeInProduction')) {
+            if ($updated !== null && $updated !== $content) {
+                $content = $updated;
+                $generated[] = $key;
+            }
+        }
+
+        if ($generated === []) {
             return;
         }
 
-        // Génération d'une chaîne hexadécimale aléatoire de 32 octets (64 caractères).
-        $secret = bin2hex(random_bytes(32));
+        if (file_put_contents($envFile, $content) === false) {
+            self::error('Impossible d\'écrire les secrets dans .env.');
+            return;
+        }
 
-        $content = str_replace(
-            'APP_SECRET=ChangeMeInProduction',
-            'APP_SECRET=' . $secret,
-            $content
-        );
-
-        file_put_contents($envFile, $content);
-        $io->write(' -> <comment>APP_SECRET</comment> sécurisé généré.');
+        self::info(' -> Secrets générés : ' . implode(', ', $generated) . '.');
     }
 
-    private static function createVarDirectories(string $rootDir, object $io): void
+    private static function createVarDirectories(string $rootDir): void
     {
         $dirs = [
             'var/cache/prod',
@@ -100,13 +133,57 @@ class Setup
 
         foreach ($dirs as $dir) {
             $path = $rootDir . '/' . $dir;
-            if (!is_dir($path)) {
-                mkdir($path, 0777, true);
-                // Tentative de permissions adaptées à Docker (si supportées).
-                @chmod($path, 0777);
+
+            if (is_dir($path)) {
+                continue;
             }
+
+            if (!mkdir($path, 0o777, true) && !is_dir($path)) {
+                self::error('Impossible de créer ' . $dir . '.');
+                continue;
+            }
+
+            // Inscriptible par l'utilisateur du conteneur, quel qu'il soit (contourne l'umask).
+            chmod($path, 0o777);
         }
 
-        $io->write(' -> Dossiers <comment>var/</comment> garantis présents.');
+        self::info(' -> Dossiers var/ garantis présents.');
+    }
+
+    /**
+     * Le dépôt du squelette ignore son composer.lock ; un projet créé doit versionner
+     * le sien pour des installations reproductibles. Retire le bloc balisé du .gitignore.
+     */
+    private static function trackComposerLock(string $rootDir): void
+    {
+        $gitignore = $rootDir . '/.gitignore';
+        $content = is_file($gitignore) ? file_get_contents($gitignore) : false;
+
+        if ($content === false) {
+            return;
+        }
+
+        $updated = preg_replace(self::SKELETON_ONLY_BLOCK, '', $content);
+
+        if ($updated === null || $updated === $content) {
+            return;
+        }
+
+        if (file_put_contents($gitignore, $updated) === false) {
+            self::error('Impossible de mettre à jour .gitignore.');
+            return;
+        }
+
+        self::info(' -> composer.lock versionné (retiré du .gitignore).');
+    }
+
+    private static function info(string $message): void
+    {
+        fwrite(STDOUT, $message . PHP_EOL);
+    }
+
+    private static function error(string $message): void
+    {
+        fwrite(STDERR, 'Erreur : ' . $message . PHP_EOL);
     }
 }

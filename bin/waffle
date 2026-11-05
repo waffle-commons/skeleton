@@ -3,96 +3,117 @@
 declare(strict_types=1);
 
 /**
- * Reference entry point for the `waffle` CLI.
+ * Point d'entrée de la CLI `waffle` du projet.
  *
- * Skeleton-shipped projects ship their own bin/waffle.php that wires the
- * concrete cache + router + container; this file is a minimal reference
- * showing the expected boot shape.
+ * Construit le cache, le routeur, le pool de connexions et le conteneur
+ * concrets, puis enregistre les commandes de la console. Adaptez-le à votre
+ * application.
  *
- * Usage:
- *   php vendor/bin/waffle <command> [options...]
- *   php vendor/bin/waffle list
+ * Usage :
+ *   php bin/waffle <commande> [options...]
+ *   php bin/waffle list
  */
 
 use App\Factory\AppKernelFactory;
+use Composer\InstalledVersions;
+use Waffle\Commons\Auth\SecurityContext;
 use Waffle\Commons\Config\Config;
+use Waffle\Commons\Config\DotEnv;
 use Waffle\Commons\Console\Command\CacheClearCommand;
 use Waffle\Commons\Console\Command\ContainerCompileCommand;
 use Waffle\Commons\Console\Command\DataWarmupCommand;
 use Waffle\Commons\Console\Command\MigrateCommand;
+use Waffle\Commons\Console\Command\MigrationRollbackCommand;
+use Waffle\Commons\Console\Command\MigrationStatusCommand;
 use Waffle\Commons\Console\Command\RouteCompileCommand;
 use Waffle\Commons\Console\Command\RouteListCommand;
 use Waffle\Commons\Console\Command\SecurityAuditCommand;
 use Waffle\Commons\Console\ConsoleApplication;
+use Waffle\Commons\Console\Maker\Command\MakeMigrationCommand;
 use Waffle\Commons\Console\Output\StreamOutput;
 use Waffle\Commons\Container\Container;
 use Waffle\Commons\Contracts\Constant\Constant;
+use Waffle\Commons\Contracts\Data\Connection\ConnectionPoolInterface;
 use Waffle\Commons\Contracts\Data\Enum\Direction;
+use Waffle\Commons\Contracts\Data\Migration\MigrationRunnerInterface;
 use Waffle\Commons\Data\Compiler\SQLCompiler;
 use Waffle\Commons\Data\Compiler\SQLDialect;
 use Waffle\Commons\Data\Migration\MigrationRunner;
 use Waffle\Commons\Data\Query\Query;
 use Waffle\Commons\Data\Warmup\QueryWarmer;
+use Waffle\Commons\OpenApi\Command\GenerateCommand;
 use Waffle\Commons\Routing\Router;
-use Waffle\Commons\Contracts\Data\Connection\ConnectionPoolInterface;
-use Waffle\Commons\Contracts\Data\Migration\MigrationRunnerInterface;
-use Waffle\Commons\Auth\SecurityContext;
 use Waffle\Commons\Security\Container\SecureContainer;
 use Waffle\Commons\Security\Security;
+use Waffle\Commons\Utils\Clock\SystemClock;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-/** @var string $root */
-$root = realpath(path: dirname(path: __DIR__));
+// __DIR__ est déjà résolu (liens symboliques compris) : son parent est la racine réelle.
+$root = dirname(path: __DIR__);
 $rootConfig = $root . DIRECTORY_SEPARATOR . 'config';
 
-// Setting up the framework
+// Mise en place du framework. Le registre d'environnement fusionne .env avec
+// l'environnement du processus (le processus l'emporte) : les `%env(...)%`, comme
+// les identifiants de base de données RFC-022, se résolvent en CLI comme en HTTP.
 $container = new Container();
-$config = new Config(configDir: $rootConfig, environment: Constant::ENV_DEV);
+$envRegistry = array_merge(new DotEnv(path: $root)->load(), getenv());
+$config = new Config(configDir: $rootConfig, environment: Constant::ENV_DEV, env: $envRegistry);
 $security = new Security($config);
 // AUTHZ-01 : la CLI n'authentifie personne ; un SecurityContext vierge satisfait
 // le SecureContainer (les voters #[Voter] ne s'exécutent pas hors requête HTTP).
 $secureContainer = new SecureContainer($container, $security, new SecurityContext());
 $cache = AppKernelFactory::buildCache($root, $config);
-$router = new Router(directory: $config->getString(key: 'waffle.paths.controllers'));
+// Résolu sous la racine de l'application, comme dans AppKernelFactory : un chemin
+// relatif dépendrait du répertoire courant, et security:audit lancé ailleurs ne
+// contrôlerait aucune route.
+$controllers = $config->getString(key: 'waffle.paths.controllers');
+$router = new Router(directory: is_string($controllers) ? $root . DIRECTORY_SEPARATOR . $controllers : false);
 
-// PDO connection pool (RFC-022) + migration runner, built here on the explicit
-// CLI path so no migration scan ever happens during an HTTP request.
+// Pool de connexions PDO (RFC-022) et exécuteur de migrations, construits ici, sur
+// le chemin explicite de la CLI : aucune requête HTTP ne parcourt les migrations.
 $connectionPool = AppKernelFactory::buildConnectionPool($config);
 $migrationRunner = new MigrationRunner(pool: $connectionPool, config: $config);
 
+// Les commandes db:* reçoivent ces deux instances directement ; le conteneur les
+// expose aussi à ce qui les résout par leur interface.
 $container->set(ConnectionPoolInterface::class, $connectionPool);
 $container->set(MigrationRunnerInterface::class, $migrationRunner);
 
-// Console application
+// Application console ; la version affichée est celle du framework installé.
 $app = new ConsoleApplication(
     name: 'Waffle',
-    version: '0.1.0-beta0',
+    version: InstalledVersions::getPrettyVersion('waffle-commons/waffle') ?? 'dev',
     output: new StreamOutput(),
 );
 
-
-// Adding commands
+// Enregistrement des commandes
 $app->add(command: new RouteListCommand(router: $router->boot(container: $secureContainer)));
 $app->add(command: new SecurityAuditCommand(router: $router->boot(container: $secureContainer)));
 $app->add(command: new CacheClearCommand(cache: $cache));
-$app->add(command: new MigrateCommand(
-    runner: $container->get(MigrationRunnerInterface::class),
-    pool: $container->get(ConnectionPoolInterface::class),
+$app->add(command: new MigrateCommand(runner: $migrationRunner, pool: $connectionPool));
+// Cycle de vie des migrations (OPS-03) : `make:migration <Nom>` écrit
+// `Version<AAAAMMJJNN>_<Nom>.sql` et son `.down.sql` dans le répertoire que lit
+// `db:migrate` ; `db:status` liste chaque version (appliquée, en attente ou
+// manquante) ; `db:rollback [--steps=N]` annule les N dernières par leurs scripts
+// `.down.sql`, après les avoir toutes vérifiées.
+$app->add(command: new MakeMigrationCommand(
+    clock: new SystemClock(),
+    migrationsPath: $config->getString(key: 'waffle.database.migrations_path') ?? 'migrations',
 ));
+$app->add(command: new MigrationStatusCommand(runner: $migrationRunner, pool: $connectionPool));
+$app->add(command: new MigrationRollbackCommand(runner: $migrationRunner, pool: $connectionPool));
 
-// Pre-compiled SQR warmup (`data:warmup`) — Roadmap Beta-3 "CLI Route & Cache
-// Warmup". The hot read queries below are compiled once to parameterised SQL,
-// serialised under var/cache/ and primed into OPcache shared memory, so the
-// first live request never pays the AST walk. Adapt the registry to your own
-// hot paths; warming never executes SQL against the database.
+// Préchauffage SQR précompilé (`data:warmup`), Roadmap Beta-3 « CLI Route & Cache
+// Warmup ». Les requêtes de lecture chaudes ci-dessous sont compilées une fois en
+// SQL paramétré, sérialisées sous var/cache/ et amorcées dans la mémoire partagée
+// d'OPcache : la première requête réelle ne paie jamais le parcours de l'AST.
+// Adaptez ce registre à vos propres chemins chauds ; le préchauffage n'exécute
+// jamais de SQL sur la base.
 $app->add(command: new DataWarmupCommand(warmers: [
     new QueryWarmer(
         queries: [
-            'users.recent' => Query::select('id')
-                ->from('users')
-                ->orderBy('id', Direction::Descending)
-                ->limit(20),
+            'users.recent' => Query::select('id')->from('users')->orderBy('id', Direction::Descending)->limit(20),
         ],
         compiler: new SQLCompiler(dialect: SQLDialect::MySQL),
         cacheFile: $root . '/var/cache/data-warmup.php',
@@ -109,5 +130,12 @@ $app->add(command: new DataWarmupCommand(warmers: [
 // (repli obligatoire RFC-019), donc le défaut dev reste inchangé.
 $app->add(command: new ContainerCompileCommand(container: $container));
 $app->add(command: new RouteCompileCommand(router: $router->boot(container: $secureContainer)));
+
+// [API-01] `openapi:generate` décrit en OpenAPI 3.1 les routes et leurs DTO
+// (`--output=public/openapi.json`, ou `-` pour la sortie standard). Le composant est
+// une dépendance de développement : une installation `--no-dev` n'a pas la commande.
+if (class_exists(GenerateCommand::class)) {
+    $app->add(command: new GenerateCommand(router: $router->boot(container: $secureContainer)));
+}
 
 exit($app->run());

@@ -18,7 +18,6 @@
 .project-memory/
 .tooling-venv/
 graphify-out/
-scripts/
 
 # Vendors
 vendor/
@@ -26,10 +25,11 @@ vendor/
 # Cache
 var/
 
-# Composer
-# The lock is deliberately NOT shipped: this is the `composer create-project`
-# target, so a committed lock would pin every new app to the SHAs frozen at
-# release time instead of resolving the tagged components. (symfony/skeleton
-# does the same.) `self.version` resolves each waffle-commons/* package to the
-# skeleton's own tag.
+###> waffle-commons/skeleton ###
+# Composer, dans le dépôt du squelette seulement : c'est la cible de
+# `composer create-project`, et un verrou versionné figerait chaque nouvelle
+# application sur les SHA de la publication au lieu des composants tagués
+# (symfony/skeleton fait de même). Un projet créé versionne le sien :
+# Scripts\Setup retire ce bloc de son .gitignore à la création.
 /composer.lock
+###< waffle-commons/skeleton ###

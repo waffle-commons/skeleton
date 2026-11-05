@@ -24,11 +24,32 @@ final class ConnectionPoolFactory
     private const int DEFAULT_POOL_SIZE = 8;
 
     /**
+     * [CARRY-01] : fenêtre de fraîcheur du ping par défaut, en millisecondes. Une
+     * connexion prouvée vivante (ouverte, ou ayant répondu au ping) il y a moins
+     * de 500 ms repart du pool sans nouveau `SELECT 1` — le seuil par défaut de
+     * HikariCP (`aliveBypassWindowMs`). Utilisée quand DB_PING_FRESHNESS_MS est
+     * absente ou invalide ; 0 rétablit le ping à chaque emprunt.
+     */
+    private const int DEFAULT_PING_FRESHNESS_MS = 500;
+
+    /**
+     * RFC-023 §3.2 : délai d'ouverture d'une connexion par défaut, en secondes —
+     * le minimum que libpq applique, plus court que le `timeoutSeconds: 3` de la
+     * sonde de disponibilité documentée. Utilisé quand DB_CONNECT_TIMEOUT est
+     * absente ou invalide.
+     */
+    private const int DEFAULT_CONNECT_TIMEOUT = 2;
+
+    /** Les pilotes réseau dont PDO lit le délai de connexion dans PDO::ATTR_TIMEOUT. */
+    private const array TIMED_DRIVERS = ['pgsql', 'mysql', 'mariadb'];
+
+    /**
      * Construit le pool de connexions PDO (RFC-022) à partir de `waffle.database.*`.
      *
      * La fabrique injectée n'ouvre une connexion que lorsque le pool en a besoin :
      * en mode worker FrankenPHP, les sockets restent tièdes entre les requêtes,
-     * sont sondés (« ping-before-dispense ») puis reconnectés de façon transparente.
+     * sont sondés (« ping-before-dispense », sauf dans la fenêtre de fraîcheur)
+     * puis reconnectés de façon transparente.
      */
     public static function create(Config $config, ?ConnectionTrackerInterface $tracker = null): PDOConnectionPool
     {
@@ -46,10 +67,33 @@ final class ConnectionPoolFactory
         // (« ping-before-dispense ») du pool doit donc être adaptée au moteur.
         $ping = $driver === 'oci' ? 'SELECT 1 FROM DUAL' : 'SELECT 1';
 
+        // RFC-023 §3.2 : une connexion qui ne s'ouvre pas échoue dans le délai au
+        // lieu de bloquer le worker (et la sonde /readyz, qui emprunte au pool).
+        // SQLite n'ouvre pas de connexion réseau ; pour lui, ATTR_TIMEOUT serait
+        // l'attente d'un verrou, que ce réglage ne doit pas changer.
+        $options = [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION];
+        if (in_array($driver, self::TIMED_DRIVERS, true)) {
+            $options[PDO::ATTR_TIMEOUT] = self::resolveConnectTimeout($config);
+        }
+
         // Fabrique sans état, rejouée à chaque création de connexion par le pool.
-        return new PDOConnectionPool(factory: static fn(): PDO => new PDO($dsn, $username, $password, [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        ]), maxConnections: self::resolvePoolSize($config), pingQuery: $ping, tracker: $tracker);
+        return new PDOConnectionPool(
+            factory: static fn(): PDO => new PDO($dsn, $username, $password, $options),
+            maxConnections: self::resolvePoolSize($config),
+            pingQuery: $ping,
+            tracker: $tracker,
+            pingFreshnessMs: self::resolvePingFreshness($config),
+        );
+    }
+
+    /**
+     * RFC-023 §3.2 : délai d'ouverture d'une connexion, en secondes
+     * (`waffle.database.connect_timeout`, interpolé depuis DB_CONNECT_TIMEOUT),
+     * validé en entier >= 1. Absent, vide ou invalide ⇒ défaut 2.
+     */
+    public static function resolveConnectTimeout(Config $config): int
+    {
+        return self::resolveInt($config, 'waffle.database.connect_timeout', 1, self::DEFAULT_CONNECT_TIMEOUT);
     }
 
     /**
@@ -61,14 +105,35 @@ final class ConnectionPoolFactory
      */
     public static function resolvePoolSize(Config $config): int
     {
-        $raw = $config->getString('waffle.database.pool_size');
+        return self::resolveInt($config, 'waffle.database.pool_size', 1, self::DEFAULT_POOL_SIZE);
+    }
+
+    /**
+     * [CARRY-01] : fenêtre de fraîcheur du ping, en millisecondes
+     * (`waffle.database.ping_freshness_ms`, interpolée depuis DB_PING_FRESHNESS_MS),
+     * validée en entier >= 0 — 0 est légitime et rétablit le ping à chaque
+     * emprunt. Absente, vide ou invalide ⇒ défaut 500.
+     */
+    public static function resolvePingFreshness(Config $config): int
+    {
+        return self::resolveInt($config, 'waffle.database.ping_freshness_ms', 0, self::DEFAULT_PING_FRESHNESS_MS);
+    }
+
+    /**
+     * Lit un entier de configuration interpolé depuis l'environnement (donc une
+     * chaîne). Absent, vide, non entier ou sous le minimum ⇒ le défaut : une
+     * valeur fautive n'empêche jamais le boot.
+     */
+    private static function resolveInt(Config $config, string $key, int $minimum, int $default): int
+    {
+        $raw = $config->getString($key);
         if ($raw === null || $raw === '') {
-            return self::DEFAULT_POOL_SIZE;
+            return $default;
         }
 
-        $size = filter_var($raw, FILTER_VALIDATE_INT);
+        $value = filter_var($raw, FILTER_VALIDATE_INT);
 
-        return is_int($size) && $size >= 1 ? $size : self::DEFAULT_POOL_SIZE;
+        return is_int($value) && $value >= $minimum ? $value : $default;
     }
 
     /**
@@ -76,8 +141,9 @@ final class ConnectionPoolFactory
      *
      * PostgreSQL ne reconnaît pas l'attribut DSN `charset` (l'encodage client est
      * négocié avec le serveur — UTF8 par défaut) ; SQLite n'attend qu'un chemin de
-     * fichier ; SQL Server et Oracle ont leur propre grammaire de DSN. Le format
-     * MySQL/MariaDB reste le cas par défaut.
+     * fichier ; SQL Server et Oracle ont leur propre grammaire de DSN. MySQL et
+     * MariaDB partagent la leur ; tout autre pilote reçoit la forme commune, sous
+     * son propre nom.
      */
     private static function buildDsn(
         string $driver,
@@ -91,8 +157,8 @@ final class ConnectionPoolFactory
             'sqlite' => sprintf('sqlite:%s', $database),
             'sqlsrv' => sprintf('sqlsrv:Server=%s,%s;Database=%s', $host, $port, $database),
             'oci' => sprintf('oci:dbname=//%s:%s/%s;charset=%s', $host, $port, $database, $charset),
-            // MariaDB shares MySQL's DSN grammar, so both are named explicitly
-            // rather than relying on the fallback.
+            // MariaDB partage la grammaire DSN de MySQL : les deux sont nommés
+            // explicitement plutôt que confiés au cas par défaut.
             'mysql', 'mariadb' => sprintf(
                 'mysql:host=%s;port=%s;dbname=%s;charset=%s',
                 $host,
@@ -100,11 +166,9 @@ final class ConnectionPoolFactory
                 $database,
                 $charset,
             ),
-            // Any other PDO driver gets the common `driver:host=…` shape with
-            // ITS OWN name. The previous fallback emitted a `mysql:` DSN for
-            // every unrecognised value, so a typo like `postgres` silently
-            // produced a MySQL connection attempt and failed somewhere far from
-            // the mistake.
+            // Tout autre pilote PDO reçoit la forme commune `pilote:host=…` sous SON
+            // nom : une faute de frappe comme `postgres` échoue sur ce nom, au lieu
+            // d'une tentative de connexion MySQL qui échouerait loin de l'erreur.
             default => sprintf('%s:host=%s;port=%s;dbname=%s', $driver, $host, $port, $database),
         };
     }

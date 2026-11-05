@@ -4,14 +4,19 @@
 # Waffle Framework - Multi-Stage Dockerfile
 # Supports both Development (with Xdebug) and Production (Optimized).
 #
-ARG FRANKEN_VERSION='1.12.2'
+ARG FRANKEN_VERSION='1.13.2'
 ARG PHP_VERSION='8'
 ARG OS='trixie'
+# Digest de l'image de base : une étiquette bouge, un digest non (build reproductible et hors ligne).
+# À changer AVEC FRANKEN_VERSION : Docker résout `étiquette@digest` par le seul digest, donc un digest
+# oublié construit l'ancienne image. Le nouveau : `docker pull dunglas/frankenphp:<version>-php8-trixie`,
+# puis `docker image inspect --format '{{index .RepoDigests 0}}'` sur la même étiquette.
+ARG FRANKEN_DIGEST='@sha256:8a7a935deb33959200628497b8201423c8b777d513a62ac1b69a91c624afdb3d'
 
 # -----------------------------------------------------------------------------
 # Stage 1: Base (Shared Runtime)
 # -----------------------------------------------------------------------------
-FROM dunglas/frankenphp:${FRANKEN_VERSION}-php${PHP_VERSION}-${OS} AS base
+FROM dunglas/frankenphp:${FRANKEN_VERSION}-php${PHP_VERSION}-${OS}${FRANKEN_DIGEST} AS base
 
 # Environment Standardization
 # Optimization for Waffle (Worker Mode)
@@ -26,6 +31,10 @@ ENV APP_ENV=prod \
 # route fails with "Failed to establish a database connection" — the image only
 # ships pdo_sqlite otherwise. Keep this list in sync with the drivers the
 # template documents.
+# pcntl : signaux POSIX (SIGTERM) pour les consommateurs CLI longue durée — l'arrêt
+# propre de `bin/waffle queue:work` (beta7 [QUEUE-02]) en dépend.
+# redis (phpredis) : l'état partagé entre workers — seaux du limiteur de débit (NET-01)
+# et circuits du disjoncteur (NET-03) — passe par le pool phpredis de waffle-commons/data.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     acl \
     file \
@@ -39,8 +48,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         gd \
         intl \
         opcache \
+        pcntl \
         pdo_pgsql \
         pdo_mysql \
+        redis \
         zip \
         yaml \
     && echo "apc.enable_cli=1" >> "$PHP_INI_DIR/conf.d/docker-php-ext-apcu.ini" \
@@ -74,7 +85,9 @@ RUN echo "xdebug.start_with_request=yes" >> $PHP_INI_DIR/conf.d/docker-php-ext-x
     && echo "xdebug.log=/tmp/xdebug.log" >> $PHP_INI_DIR/conf.d/docker-php-ext-xdebug.ini
 
 # Install Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Version épinglée par digest, comme les autres images : changer la version ET le digest ensemble
+# (Docker résout `tag@digest` par le seul digest ; voir scripts/images-pin.py dans l'umbrella).
+COPY --from=composer:2.10.3@sha256:da624c2c705d54e2f5a9bb77a5dc6c7d091711433ebefd7035672e84c2010fee /usr/bin/composer /usr/bin/composer
 
 # Create a non-root user for development (DX Best Practice)
 # This aligns permissions with the host Linux user
@@ -91,10 +104,23 @@ CMD [ "frankenphp", "run", "--config", "/etc/caddy/Caddyfile" ]
 # -----------------------------------------------------------------------------
 FROM base AS builder
 
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Même Composer épinglé qu'à l'étape dev.
+COPY --from=composer:2.10.3@sha256:da624c2c705d54e2f5a9bb77a5dc6c7d091711433ebefd7035672e84c2010fee /usr/bin/composer /usr/bin/composer
 
 # Copy only manifests to optimize Docker cache
-COPY composer.json composer.lock ./
+# Le verrou est facultatif (CARRY-08) : le squelette ne le versionne pas (cible de
+# `composer create-project`), donc un clone neuf n'en a pas, et le joker laisse la
+# construction résoudre les dépendances. Une application qui versionne son
+# composer.lock obtient une construction reproductible.
+COPY composer.json composer.lock* ./
+
+# Dans le dépôt du squelette seulement : ses dépendances `self.version` exigent
+# la version de la racine, que Composer devine (1.0.0) sans verrou ni .git dans
+# le contexte. Nommez alors la version visée :
+# `--build-arg COMPOSER_ROOT_VERSION=0.1.0-beta7`. Un projet créé par
+# `composer create-project` porte la version choisie dans son composer.json :
+# l'argument y est inutile, comme partout où il y a un verrou.
+ARG COMPOSER_ROOT_VERSION
 
 # Install PROD vendors (no dev, optimized)
 RUN composer install --no-dev --no-scripts --prefer-dist --no-progress --no-interaction --optimize-autoloader
@@ -102,12 +128,14 @@ RUN composer install --no-dev --no-scripts --prefer-dist --no-progress --no-inte
 # Copy the rest of the source code
 COPY . .
 
+# Autoloader warmup — AVANT d’activer le préchargement : Composer ne doit jamais
+# tourner sous opcache.preload (un fichier préchargé reste figé pour tout le
+# processus, et Composer relirait des cartes d’autoload périmées).
+RUN composer dump-autoload --optimize --classmap-authoritative --no-dev
+
 # Enable Preload ONLY in production and ONLY after code is copied
 RUN echo "opcache.validate_timestamps = 1" >> $PHP_INI_DIR/conf.d/app.ini \
     && echo "opcache.preload=/app/config/preload.php" >> $PHP_INI_DIR/conf.d/app.ini
-
-# Autoloader warmup
-RUN composer dump-autoload --optimize --classmap-authoritative --no-dev
 
 # -----------------------------------------------------------------------------
 # Stage 4: Production (Minimal & Secure)
@@ -135,6 +163,10 @@ COPY --from=builder --link /app/vendor /app/vendor
 COPY --from=builder --link /app/src /app/src
 COPY --from=builder --link /app/config /app/config
 COPY --from=builder --link /app/public /app/public
+# La console et les migrations SQL : un Job Kubernetes lance
+# `php bin/waffle db:migrate` depuis l'image de release (OPS-03, RFC-014).
+COPY --from=builder --link /app/bin /app/bin
+COPY --from=builder --link /app/migrations /app/migrations
 
 # Enable Preload ONLY in production and ONLY after code is copied
 RUN echo "opcache.validate_timestamps = 0" >> $PHP_INI_DIR/conf.d/app.ini \

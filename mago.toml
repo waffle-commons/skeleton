@@ -3,7 +3,10 @@
 php-version = "8.5.5"
 
 [source]
-paths = ["src/", "tests/"]
+# Tout le PHP du projet est analysé, points d'entrée compris : le script
+# d'installation Composer (scripts/), le contrôleur frontal (public/), le
+# préchargement OPcache (config/) et la CLI (bin/waffle, sans extension).
+paths = ["src/", "tests/", "scripts/", "public/", "config/", "bin/waffle"]
 includes = ["vendor"]
 excludes = []
 
@@ -14,7 +17,7 @@ excludes = []
 # `App\` et peut consommer l'ensemble de l'écosystème waffle-commons ainsi que
 # la façade `Waffle\` du framework.
 [guard]
-mode = "default"
+mode = "perimeter"
 excludes = ["tests/bootstrap.php"]
 
 [guard.perimeter]
@@ -28,11 +31,33 @@ waffle = ["Waffle\\**", "Waffle\\Commons\\**"]
 [[guard.perimeter.rules]]
 namespace = "App"
 permit = [
+    # Worker-safety audit tooling (igor-php): dev-only #[WorkerSafe] metadata, inert at runtime.
+    "IgorPhp\\IgorBundle\\Attribute\\**",
     "App\\**",
     "@layer:core",
     "@layer:psr",
     "@layer:waffle",
 ]
+
+# Points d'entrée (bin/waffle, public/index.php, config/preload.php), dans
+# l'espace de noms global : ils assemblent l'application à partir du code `App\`,
+# du framework et des deux classes de Composer qu'ils lisent (la version installée,
+# la carte de classes du préchargement).
+[[guard.perimeter.rules]]
+namespace = "@global"
+permit = [
+    "App\\**",
+    "Composer\\Autoload\\ClassLoader",
+    "Composer\\InstalledVersions",
+    "@layer:core",
+    "@layer:waffle",
+]
+
+# Script d'installation Composer (scripts/Setup.php) : PHP pur, sans dépendance,
+# pas même Composer, dont il s'exécute pourtant au sein de create-project.
+[[guard.perimeter.rules]]
+namespace = "Scripts"
+permit = ["Scripts\\**", "@layer:core"]
 
 [[guard.perimeter.rules]]
 namespace = "AppTests"

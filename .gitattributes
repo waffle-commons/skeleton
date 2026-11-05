@@ -1,0 +1,7 @@
+# Fichiers du dépôt du squelette, absents des projets créés par `composer create-project` :
+# l'archive que Composer télécharge (le zipball de GitHub) respecte export-ignore.
+/.gitattributes     export-ignore
+/CHANGELOG.md       export-ignore
+/CONTRIBUTING.md    export-ignore
+/SECURITY.md        export-ignore
+/create-project.sh  export-ignore

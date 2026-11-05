@@ -1,0 +1,89 @@
+# Configuration de TEST de l'application Waffle.
+#
+# Référencée par tests/bootstrap.php (const APP_CONFIG = 'tests/config'), elle
+# fournit des valeurs sûres et autonomes pour amorcer le kernel sous PHPUnit
+# sans dépendance réseau : cache en mémoire (array), aucune connexion ouverte au
+# boot (le pool PDO est paresseux), secrets éphémères tolérés hors production.
+waffle:
+  env: 'test'
+  # Hors prod : sans APP_SECRET ni secret CSRF, la clé CSRF est éphémère par processus.
+  secret: ''
+  trusted_hosts:
+    - localhost
+  # Sondes d'orchestrateur (OPS-01, RFC-023) : /healthz (vivacité) et /readyz
+  # (disponibilité). Une sonde listée ici est indispensable : absente ou en échec,
+  # l'instance répond 503 sur /readyz et Kubernetes cesse de lui router du trafic.
+  health:
+    required:
+      - db.pool
+    # Arrêt gracieux (OPS-02, RFC-023 §5.1) : le hook preStop du pod crée ce fichier
+    # puis patiente ; tant qu'il existe, /readyz répond 503 alors que PHP sert encore
+    # le reste du trafic. Ensuite SIGTERM, et le grace_period de Caddy draine l'en-cours.
+    drain_marker: '/tmp/waffle-draining'
+  security:
+    level: 10
+    csrf:
+      # Hors prod : un secret absent retombe sur un secret éphémère par processus.
+      secret: ''
+    cors:
+      allowed_origins: []
+    ssrf:
+      allowed_hosts: []
+    # Limiteur de débit coupé sous test : aucun Redis requis pour amorcer le kernel,
+    # et aucun quota partagé entre deux exécutions. Ses tests le construisent
+    # eux-mêmes (tests/src/Factory/RateLimitFactoryTest.php).
+    rate_limit:
+      enabled: false
+  # Reprises bornées et rapides sous test ; disjoncteur coupé pour la même raison
+  # que le limiteur (tests/src/Factory/HttpClientFactoryTest.php l'exerce).
+  http_client:
+    resilience:
+      max_attempts: 1
+    breaker:
+      enabled: false
+  auth:
+    # Hors prod : secret éphémère par processus si absent (fail-open dev/test only).
+    secret: ''
+    tenant: 'skeleton'
+    jwt:
+      issuer: 'https://waffle-dev.local'
+      audience: 'waffle-skeleton'
+    webauthn:
+      rp_id: 'localhost'
+      rp_name: 'Waffle Skeleton'
+      allowed_origins:
+        - 'https://localhost'
+    assert_hosts: []
+  paths:
+    controllers: 'src/Controller'
+    services: 'src/Service'
+    event_listeners: 'src/EventListener'
+  cache:
+    # Cache en mémoire : aucun Redis requis pour amorcer le kernel sous test.
+    adapter: 'array'
+    directory: 'var/cache/psr16'
+    default_ttl: 3600
+    prefix: 'waffle:cache:'
+  database:
+    # Valeurs littérales : le pool est paresseux, aucune connexion n'est ouverte
+    # au boot ni sur une requête GET (le middleware transactionnel n'enveloppe que
+    # les écritures). Port 1 : rien n'y écoute, sur aucune machine de test ; le
+    # pool est donc toujours injoignable, et ProbeEndpointsTest vérifie que /readyz
+    # le dit (503) au lieu d'accepter les deux verdicts.
+    driver: 'pgsql'
+    host: '127.0.0.1'
+    port: '1'
+    database: 'waffle_test'
+    username: 'waffle'
+    password: ''
+    charset: 'utf8'
+    # BENCH-04 : interpolée depuis DB_POOL_SIZE — reste `null` (⇒ défaut 8) tant
+    # que la variable n'est pas injectée dans le registre d'env du test.
+    pool_size: '%env(DB_POOL_SIZE)%'
+    # [CARRY-01] : interpolée depuis DB_PING_FRESHNESS_MS — reste `null` (⇒ défaut
+    # 500) tant que la variable n'est pas injectée dans le registre d'env du test.
+    ping_freshness_ms: '%env(DB_PING_FRESHNESS_MS)%'
+    # RFC-023 §3.2 : interpolé depuis DB_CONNECT_TIMEOUT — reste `null` (⇒ défaut 2)
+    # tant que la variable n'est pas injectée dans le registre d'env du test.
+    connect_timeout: '%env(DB_CONNECT_TIMEOUT)%'
+    migrations_path: 'migrations'
