@@ -23,7 +23,7 @@
     "minimum-stability": "beta",
     "prefer-stable": true,
     "require": {
-        "php": "^8.5",
+        "php": "^8.5.12",
         "ext-redis": "*",
         "ext-yaml": "*",
         "ext-zend-opcache": "*",
