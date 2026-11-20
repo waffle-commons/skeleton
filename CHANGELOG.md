@@ -5,6 +5,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Released in lockstep with the Waffle Commons umbrella tag.
 
+## [Unreleased]
+
+### Security
+- S-B1-07 (LOW, queue).
+- S-B1-08 (LOW, queue).
+
+### Changed
+- Development dependency: igor-php `^0.11.0`. `phpunit.xml` drops `cacheResult`, the PHPUnit 12.5 default.
+- `igor.json`: `Psr\` is back among the safe namespaces, which igor's own defaults include.
+
 ## [0.1.0-beta7] — 2026-11
 
 **Theme: the production surface wired in — probes, graceful shutdown, rate limiting, resilient outbound calls and migrations.**
